@@ -78,6 +78,27 @@ def test_unanswerable_items_carry_no_evidence() -> None:
         _item(evidence=None)
 
 
+def test_facts_may_come_from_extra_evidence(tmp_path: Path) -> None:
+    _pdf(tmp_path)
+    item = _item(
+        expected_facts=["100%", "FICTIONAL"],
+        derived_facts=["200 %"],
+        notes="FICTIONAL: 200 % = twice the ratio",
+        extra_evidence=[Evidence(file="bam/fictional.pdf", page=2, quote="Article 3 FICTIONAL")],
+    )
+    assert validate(item, tmp_path) == []
+    assert len(item.all_evidence) == 2
+    bad = item.model_copy(
+        update={"extra_evidence": [Evidence(file="bam/fictional.pdf", page=1, quote="absent")]}
+    )
+    assert "q1: quote not found on page 1" in validate(bad, tmp_path)
+
+
+def test_derived_facts_need_a_note() -> None:
+    with pytest.raises(ValidationError, match="derived facts need a note"):
+        _item(derived_facts=["200 %"])
+
+
 def test_roundtrip(tmp_path: Path) -> None:
     path = tmp_path / "golden.jsonl"
     write_golden(path, [_item()])

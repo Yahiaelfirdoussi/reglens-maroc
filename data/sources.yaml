@@ -536,14 +536,15 @@ documents:
     du crédit
   issuer: BAM
   reference: 48/G/2007
-  published: '2007-08-31'
+  published: '2007-08-13'
   url: https://www.bkam.ma/content/download/498973/4963130/24 - Directive n°48G2007.pdf
   language: fr
   source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
   sha256: 710b011f96c12bcc022476558bae7d539c309b9b29d4456ec7d124664cfb9f67
   text_source: native
   needs_review: false
-  notes: null
+  notes: The directive dates itself "du 13 août 2007" on page 1; the BAM website title says 31 August
+    2007.
 - file: bam/bam-directive-n49-g-2007-du-31-aout-2007-relative-a-la-fonction-f0b30801.pdf
   title: Directive n°49/G/2007 du 31 août 2007 relative à la fonction conformité
   issuer: BAM

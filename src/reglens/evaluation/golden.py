@@ -17,6 +17,7 @@ from reglens.ingestion.ocr import page_texts
 from reglens.models import Issuer, Language
 
 Status = Literal["draft", "approved", "rejected"]
+Difficulty = Literal["standard", "hard"]
 
 
 class Evidence(BaseModel):
@@ -31,11 +32,17 @@ class GoldenItem(BaseModel):
     language: Language
     answerable: bool
     theme: str
+    # "hard": paraphrased, conversational or jargon questions that do not reuse the
+    # article's own wording (e.g. "LCR" for "ratio de liquidité").
+    difficulty: Difficulty = "standard"
     expected_issuer: Issuer | None = None
     expected_reference: str | None = None
     expected_section: str | None = None
-    expected_facts: list[str] = []
+    expected_facts: list[str] = []  # each must appear verbatim in one of the quotes
+    # Facts computed from quoted ones (e.g. a sum of two articles); a note must explain how.
+    derived_facts: list[str] = []
     evidence: Evidence | None = None
+    extra_evidence: list[Evidence] = []  # further passages when the answer spans articles
     status: Status = "draft"
     notes: str | None = None
 
@@ -43,9 +50,17 @@ class GoldenItem(BaseModel):
     def _consistent(self) -> "GoldenItem":
         if self.answerable and self.evidence is None:
             raise ValueError(f"{self.id}: answerable questions need evidence")
-        if not self.answerable and (self.evidence or self.expected_facts):
+        if not self.answerable and (
+            self.evidence or self.extra_evidence or self.expected_facts or self.derived_facts
+        ):
             raise ValueError(f"{self.id}: unanswerable questions carry no evidence or facts")
+        if self.derived_facts and not self.notes:
+            raise ValueError(f"{self.id}: derived facts need a note explaining the derivation")
         return self
+
+    @property
+    def all_evidence(self) -> list[Evidence]:
+        return ([self.evidence] if self.evidence else []) + self.extra_evidence
 
 
 def load_golden(path: Path) -> list[GoldenItem]:
@@ -56,7 +71,16 @@ def load_golden(path: Path) -> list[GoldenItem]:
 def write_golden(path: Path, items: list[GoldenItem]) -> None:
     path.write_text(
         "".join(
-            json.dumps(item.model_dump(exclude_none=True), ensure_ascii=False) + "\n"
+            json.dumps(
+                item.model_dump(
+                    exclude_none=True,
+                    exclude={
+                        k for k in ("derived_facts", "extra_evidence") if not getattr(item, k)
+                    },
+                ),
+                ensure_ascii=False,
+            )
+            + "\n"
             for item in items
         ),
         encoding="utf-8",
@@ -69,21 +93,28 @@ def compact(text: str) -> str:
 
 
 def validate(item: GoldenItem, raw_dir: Path) -> list[str]:
-    """Return the problems with one item (empty list when it is consistent)."""
-    if item.evidence is None:
-        return []
-    errors = []
-    pdf = raw_dir / item.evidence.file
-    if not pdf.exists():
-        return [f"{item.id}: file not found: {item.evidence.file}"]
-    pages = page_texts(pdf)
-    if not 1 <= item.evidence.page <= len(pages):
-        return [f"{item.id}: page {item.evidence.page} out of range (1-{len(pages)})"]
-    quote = compact(item.evidence.quote)
-    if quote not in compact(pages[item.evidence.page - 1]):
-        errors.append(f"{item.id}: quote not found on page {item.evidence.page}")
+    """Return the problems with one item (empty list when it is consistent).
+
+    Every quote must be on its page, and every expected fact must appear in one of the
+    item's quotes.
+    """
+    errors: list[str] = []
+    quotes: list[str] = []
+    for evidence in item.all_evidence:
+        pdf = raw_dir / evidence.file
+        if not pdf.exists():
+            errors.append(f"{item.id}: file not found: {evidence.file}")
+            continue
+        pages = page_texts(pdf)
+        if not 1 <= evidence.page <= len(pages):
+            errors.append(f"{item.id}: page {evidence.page} out of range (1-{len(pages)})")
+            continue
+        quote = compact(evidence.quote)
+        quotes.append(quote)
+        if quote not in compact(pages[evidence.page - 1]):
+            errors.append(f"{item.id}: quote not found on page {evidence.page}")
     for fact in item.expected_facts:
-        if compact(fact) not in quote:
+        if not any(compact(fact) in quote for quote in quotes):
             errors.append(f"{item.id}: fact {fact!r} not in quote")
     return errors
 

@@ -10,5 +10,9 @@ class Retriever:
         self._embedder = embedder
         self._store = store
 
+    @property
+    def embedder(self) -> Embedder:
+        return self._embedder
+
     def retrieve(self, question: str, k: int) -> list[ScoredChunk]:
         return self._store.search(self._embedder.embed_query(question), limit=k)

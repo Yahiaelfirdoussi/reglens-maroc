@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from reglens.generation.citations import Citation, build_citations, strip_invalid_citations
 from reglens.generation.llm import LLM
 from reglens.generation.prompts import build_messages
+from reglens.guardrails import ScopeClassifier, check, fixed_answer
 from reglens.models import ScoredChunk
 from reglens.retrieval.retriever import Retriever
 
@@ -18,15 +19,36 @@ class Answer(BaseModel):
     sources: list[ScoredChunk]
     retrieval_ms: float
     generation_ms: float | None = None
+    # "ok" when the question went through; otherwise the guardrail that answered it
+    # ("meta", "off_topic", "greeting", "too_long", "empty") without retrieval or LLM.
+    guardrail: str = "ok"
 
 
 class RagPipeline:
-    def __init__(self, retriever: Retriever, llm: LLM | None, k: int) -> None:
+    def __init__(
+        self,
+        retriever: Retriever,
+        llm: LLM | None,
+        k: int,
+        scope: ScopeClassifier | None = None,
+    ) -> None:
         self._retriever = retriever
         self._llm = llm
         self._k = k
+        self._scope = scope
 
     def answer(self, question: str) -> Answer:
+        guard = check(question, self._scope)
+        if not guard.allowed:
+            return Answer(
+                question=guard.question,
+                text=fixed_answer(guard),
+                citations=[],
+                sources=[],
+                retrieval_ms=0.0,
+                guardrail=guard.verdict,
+            )
+        question = guard.question
         start = time.perf_counter()
         sources = self._retriever.retrieve(question, self._k)
         retrieval_ms = (time.perf_counter() - start) * 1000

@@ -37,6 +37,8 @@ documents:
   - url: "https://www.bkam.ma/content/download/498956/4963093/12 - Circ 8G12 CMDR.pdf"
     # 8/G/2012 | Circulaire n°8/G/12 du 19 avril 2013 relative au coefficient maximum de division des risqu
   - url: "https://www.bkam.ma/content/download/498973/4963130/24 - Directive n°48G2007.pdf"
+    published: "2007-08-13"
+    notes: "The directive dates itself \"du 13 août 2007\" on page 1; the BAM website title says 31 August 2007."
     # 48/G/2007 | Directive n°48/G/2007 du 31 août 2007 relative au dispositif de gestion du risque de conce
   - url: "https://www.bkam.ma/content/download/498970/4963124/21 - Directive n°29G2007.pdf"
     # 29/G/2007 | Directive n°29/G/2007 du 13 avril 2007 relative au dispositif de gestion des risques opéra

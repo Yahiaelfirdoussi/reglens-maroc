@@ -231,8 +231,15 @@ def ask(
     if settings.llm_model:
         key = settings.llm_api_key.get_secret_value() if settings.llm_api_key else None
         llm = LiteLLMClient(settings.llm_model, key, settings.llm_timeout_s)
-    answer = RagPipeline(_retriever(), llm, k or settings.top_k).answer(question)
+    from reglens.guardrails import ScopeClassifier
 
+    retriever = _retriever()
+    scope = ScopeClassifier(retriever.embedder)
+    answer = RagPipeline(retriever, llm, k or settings.top_k, scope).answer(question)
+
+    if answer.guardrail != "ok":
+        typer.echo(answer.text or "")
+        return
     if answer.text is None:
         typer.echo("No LLM configured (REGLENS_LLM_MODEL): showing the retrieved sources.\n")
     else:
@@ -272,6 +279,43 @@ def evaluate(
         f"doc hit@{depth} {s[f'doc_hit@{depth}']:.1%} | n={s['n']:.0f}"
     )
     typer.echo(f"Report: {md_path} and {json_path}")
+
+
+@app.command("eval-guardrails")
+def eval_guardrails(
+    guard_set: Annotated[Path, typer.Argument(help="Labelled guardrail cases (JSONL).")] = Path(
+        "eval/guardrails_set.jsonl"
+    ),
+    golden_set: Annotated[Path, typer.Option(help="Golden set: every question must pass.")] = Path(
+        "eval/golden_set.jsonl"
+    ),
+    out: Annotated[Path, typer.Option(help="Markdown report.")] = Path("eval/report/guardrails.md"),
+) -> None:
+    """Measure the input guardrails (meta, off-topic, greeting, false refusals)."""
+    from reglens.evaluation.guardrails_eval import (
+        evaluate_guardrails,
+        load_cases,
+        render_markdown,
+    )
+    from reglens.guardrails import ScopeClassifier
+    from reglens.retrieval.embeddings import make_embedder
+
+    settings = get_settings()
+    embedder = make_embedder(
+        settings.embedding_model, settings.model_cache_dir, settings.embedder_api_key()
+    )
+    report = evaluate_guardrails(load_cases(guard_set, golden_set), ScopeClassifier(embedder))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(render_markdown(report, embedder.name), encoding="utf-8")
+    table = report.confusion()
+    ok_total = sum(table["ok"].values())
+    typer.echo(
+        " | ".join(
+            f"{k}: {report.accuracy(k):.1%}" for k in ("ok", "meta", "off_topic", "greeting")
+        )
+        + f" | false refusals {ok_total - table['ok']['ok']}/{ok_total}"
+    )
+    typer.echo(f"Report: {out}")
 
 
 @app.command()

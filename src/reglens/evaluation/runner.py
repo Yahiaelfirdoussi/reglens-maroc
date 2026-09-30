@@ -16,6 +16,7 @@ class ItemResult:
     id: str
     language: str
     theme: str
+    difficulty: str
     passage_rank: int | None
     document_rank: int | None
     retrieval_ms: float
@@ -64,14 +65,17 @@ def evaluate_retrieval(
         start = time.perf_counter()
         results = retriever.retrieve(item.question, k)
         elapsed = (time.perf_counter() - start) * 1000
-        evidence = item.evidence
-        passage = [m.is_passage_hit(r.chunk, evidence.file, evidence.quote) for r in results]
-        document = [r.chunk.file == evidence.file for r in results]
+        passages = item.all_evidence
+        passage = [
+            any(m.is_passage_hit(r.chunk, e.file, e.quote) for e in passages) for r in results
+        ]
+        document = [any(r.chunk.file == e.file for e in passages) for r in results]
         report.items.append(
             ItemResult(
                 id=item.id,
                 language=item.language,
                 theme=item.theme,
+                difficulty=item.difficulty,
                 passage_rank=m.first_hit_rank(passage),
                 document_rank=m.first_hit_rank(document),
                 retrieval_ms=elapsed,
@@ -110,6 +114,7 @@ def render_markdown(report: Report) -> str:
         )
 
     lines.append(row("**All**", s))
+    lines += [row(f"difficulty={name}", v) for name, v in report.by("difficulty").items()]
     lines += [row(f"lang={name}", v) for name, v in report.by("language").items()]
     lines += [row(f"theme={name}", v) for name, v in report.by("theme").items()]
     lines += [
@@ -130,6 +135,7 @@ def write_report(report: Report, out_dir: Path) -> tuple[Path, Path]:
         "k": report.k,
         "created_at": report.created_at,
         "summary": report.summary(),
+        "by_difficulty": report.by("difficulty"),
         "by_language": report.by("language"),
         "by_theme": report.by("theme"),
         "items": [asdict(item) for item in report.items],

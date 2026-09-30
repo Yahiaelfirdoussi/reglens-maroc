@@ -83,3 +83,36 @@ Known limits:
 - AMMC 02/20 is in Arabic (Bulletin officiel Arabic edition). Its text layer stores glyphs in
   visual order, so it is not a usable OCR reference (CER 47% against it); it is excluded from
   the totals and will need its own handling in Phase 1.
+
+## Harder questions (golden set v2)
+
+20 hard questions were added (q077-q096): jargon the texts never use (CET1, LCR, ALCO),
+everyday wording ("ma banque veut fermer mon compte"), Arabic paraphrases, and 10 documents
+that had no question yet. 3 hard unanswerable questions keep the unanswerable share at 15%
+(17/113). All 113 questions are reviewed and approved. One reviewer edit: q077 asks for the
+CET1 requirement including the conservation buffer; its answer (8 %) is recorded as a derived
+fact (5,5 % in Article 4 + 2,5 % in Article 5), with both articles as quoted evidence.
+
+| Configuration | Hit@6 standard (n=76) | Hit@6 hard (n=20) | MRR@6 all (n=96) |
+|---|---:|---:|---:|
+| Baseline (local MiniLM) | 69.7% | 65.0% | 0.445 |
+| OpenAI `text-embedding-3-small` (default) | 89.5% | 80.0% | 0.680 |
+
+The hard set leaves room to measure Phase 2 changes. Hard misses with 3-small: q077 (CET1),
+q080 (Arabic complaint), q086, q095 (Islamic-bank LCR).
+
+## Guardrails
+
+Measured with `reglens eval-guardrails` on 59 labelled cases (`eval/guardrails_set.jsonl`)
+plus the 113 golden questions, which must all pass. Scope embeddings: `text-embedding-3-small`.
+Reference phrases were written before the evaluation and not tuned on it.
+
+| Expected | n | Correct |
+|---|---:|---:|
+| In scope (golden set + 10 look-alikes, e.g. "quel modèle de convention") | 123 | 100% (0 false refusals) |
+| Questions about the system (model, provider, prompt, creators, overrides) | 22 | 100% |
+| Greetings | 6 | 100% |
+| Off-topic | 21 | 81.0% |
+
+Off-topic misses (weather, a capital city, tourism, flu in Arabic) pass to retrieval, where
+the Phase 3 abstention threshold and the system prompt's scope rule are the next layers.
