@@ -158,11 +158,16 @@ def _retriever() -> "Retriever":
     settings = get_settings()
     api_key = settings.qdrant_api_key.get_secret_value() if settings.qdrant_api_key else None
     client = make_client(settings.qdrant_url, settings.qdrant_path, api_key)
-    store = QdrantStore(client, settings.qdrant_collection)
+    store = QdrantStore(client, settings.collection_name)
     if store.count() == 0:
         typer.echo("The index is empty. Run `reglens ingest data/raw` first.", err=True)
         raise typer.Exit(code=1)
-    return Retriever(make_embedder(settings.embedding_model, settings.model_cache_dir), store)
+    return Retriever(
+        make_embedder(
+            settings.embedding_model, settings.model_cache_dir, settings.embedder_api_key()
+        ),
+        store,
+    )
 
 
 def _config_snapshot() -> dict[str, object]:
@@ -191,13 +196,19 @@ def ingest(
     api_key = settings.qdrant_api_key.get_secret_value() if settings.qdrant_api_key else None
     store = QdrantStore(
         make_client(settings.qdrant_url, settings.qdrant_path, api_key),
-        settings.qdrant_collection,
+        settings.collection_name,
     )
-    embedder = make_embedder(settings.embedding_model, settings.model_cache_dir)
+    embedder = make_embedder(
+        settings.embedding_model, settings.model_cache_dir, settings.embedder_api_key()
+    )
     stats = run_ingest(path, embedder, store, settings.chunk_size, settings.chunk_overlap)
     typer.echo(
-        f"Indexed {stats.chunks} chunks from {stats.documents} documents with {embedder.name}."
+        f"Indexed {stats.chunks} chunks from {stats.documents} documents with {embedder.name} "
+        f"into collection {settings.collection_name}."
     )
+    tokens = getattr(embedder, "tokens_used", 0)
+    if tokens:
+        typer.echo(f"Embedding API usage: {tokens:,} tokens.")
     if stats.truncated:
         typer.echo(
             f"WARNING: {stats.truncated} chunks exceed the embedding model's input window; "

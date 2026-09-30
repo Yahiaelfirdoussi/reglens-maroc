@@ -66,16 +66,23 @@ def ingest(
     overlap: int,
     batch_size: int = 64,
 ) -> IngestStats:
-    """Rebuild the collection from every document under ``raw_dir``."""
+    """Rebuild the collection from every document under ``raw_dir``.
+
+    Everything is embedded before the old collection is dropped, so a failure while
+    embedding (network, quota) leaves the existing index untouched.
+    """
     chunks = list(iter_chunks(raw_dir, size, overlap))
     is_truncated = getattr(embedder, "is_truncated", None)
     truncated = sum(is_truncated(c.text) for c in chunks) if is_truncated else 0
     if truncated:
         log.warning("chunks_truncated", count=truncated, total=len(chunks))
-    store.recreate(embedder.dim)
+    vectors: list[list[float]] = []
     for start in range(0, len(chunks), batch_size):
         batch = chunks[start : start + batch_size]
-        store.upsert(batch, embedder.embed_documents([c.text for c in batch]))
+        vectors.extend(embedder.embed_documents([c.text for c in batch]))
+    store.recreate(embedder.dim)
+    for start in range(0, len(chunks), batch_size):
+        store.upsert(chunks[start : start + batch_size], vectors[start : start + batch_size])
     documents = len({c.file for c in chunks})
     log.info("ingest_done", documents=documents, chunks=len(chunks), embedder=embedder.name)
     return IngestStats(documents, len(chunks), truncated)

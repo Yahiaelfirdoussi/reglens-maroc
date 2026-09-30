@@ -24,7 +24,9 @@ class Settings(BaseSettings):
     qdrant_collection: str = "reglens"
 
     # Embeddings (FastEmbed / ONNX). "hash" selects the offline test embedder.
+    # "openai/<model>" uses the OpenAI API with `embedding_api_key`.
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    embedding_api_key: SecretStr | None = None
     model_cache_dir: Path = Path.home() / ".cache" / "reglens" / "models"
 
     # Fixed-size chunking (baseline). Sized to the embedding model's 128-token window.
@@ -38,6 +40,16 @@ class Settings(BaseSettings):
     llm_model: str = ""
     llm_api_key: SecretStr | None = None
     llm_timeout_s: float = 60.0
+
+    @property
+    def collection_name(self) -> str:
+        """One collection per embedding model, so indexes for different models coexist."""
+        from reglens.retrieval.embeddings import collection_suffix
+
+        return f"{self.qdrant_collection}__{collection_suffix(self.embedding_model)}"
+
+    def embedder_api_key(self) -> str | None:
+        return self.embedding_api_key.get_secret_value() if self.embedding_api_key else None
 
     @field_validator("data_dir", "qdrant_path", "model_cache_dir", mode="after")
     @classmethod

@@ -3,6 +3,7 @@
 Uses the hash embedder, an in-memory Qdrant and a fake LLM: no network, no API key.
 """
 
+from collections.abc import Sequence
 from pathlib import Path
 
 import pymupdf
@@ -72,6 +73,19 @@ def test_retrieval_finds_the_right_article(retriever: Retriever) -> None:
     assert results[0].chunk.file == "bam/fictional-liquidite.pdf"
     assert "999 %" in results[0].chunk.text
     assert results[0].chunk.page_start == 1
+
+
+def test_failed_ingest_keeps_the_existing_index(corpus: Path, retriever: Retriever) -> None:
+    store = retriever._store
+    before = store.count()
+
+    class BrokenEmbedder(HashEmbedder):
+        def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
+            raise ConnectionError("network down (FICTIONAL)")
+
+    with pytest.raises(ConnectionError):
+        ingest(corpus, BrokenEmbedder(), store, size=120, overlap=20)
+    assert store.count() == before
 
 
 def test_chunk_ids_are_stable() -> None:

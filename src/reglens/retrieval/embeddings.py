@@ -1,12 +1,15 @@
-"""Text embedders behind a small protocol: FastEmbed (ONNX) in production, hashing in tests."""
+"""Text embedders behind a small protocol: local FastEmbed (ONNX), the OpenAI API over
+HTTP, and a hashing embedder for tests."""
 
 import hashlib
 import math
 import re
-from collections.abc import Sequence
+import time
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Protocol
+from typing import ClassVar, Protocol
 
+import httpx
 import structlog
 
 log = structlog.get_logger(__name__)
@@ -90,7 +93,93 @@ class HashEmbedder:
         return self._vector(text)
 
 
-def make_embedder(model: str, cache_dir: Path) -> Embedder:
+class OpenAIEmbedder:
+    """OpenAI embeddings over plain HTTP (no SDK): batched, with retries and timeouts."""
+
+    KNOWN_DIMS: ClassVar[dict[str, int]] = {
+        "text-embedding-3-small": 1536,
+        "text-embedding-3-large": 3072,
+    }
+    RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+
+    def __init__(
+        self,
+        model: str,
+        api_key: str,
+        client: httpx.Client | None = None,
+        batch_size: int = 128,
+        retries: int = 4,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        if not api_key:
+            raise ValueError(
+                "OpenAI embeddings need an API key: set REGLENS_EMBEDDING_API_KEY in .env"
+            )
+        self._model = model
+        self._client = client or httpx.Client(
+            base_url="https://api.openai.com/v1", timeout=httpx.Timeout(60.0)
+        )
+        self._headers = {"Authorization": f"Bearer {api_key}"}
+        self._batch_size = batch_size
+        self._retries = retries
+        self._sleep = sleep
+        self.tokens_used = 0  # billed tokens, for cost reporting
+        self._dim = self.KNOWN_DIMS.get(model) or len(self._embed(["dimension probe"])[0])
+
+    @property
+    def name(self) -> str:
+        return f"openai/{self._model}"
+
+    @property
+    def dim(self) -> int:
+        return self._dim
+
+    def _embed(self, texts: list[str]) -> list[list[float]]:
+        for attempt in range(self._retries + 1):
+            try:
+                response = self._client.post(
+                    "/embeddings",
+                    json={"model": self._model, "input": texts},
+                    headers=self._headers,
+                )
+                if response.status_code not in self.RETRY_STATUSES:
+                    response.raise_for_status()
+                    payload = response.json()
+                    self.tokens_used += int(payload.get("usage", {}).get("total_tokens", 0))
+                    rows = sorted(payload["data"], key=lambda row: row["index"])
+                    return [[float(x) for x in row["embedding"]] for row in rows]
+                error: Exception = httpx.HTTPStatusError(
+                    f"status {response.status_code}", request=response.request, response=response
+                )
+            except httpx.TransportError as exc:
+                error = exc
+            if attempt == self._retries:
+                raise error
+            backoff = 2.0**attempt
+            log.warning("embedding_retry", attempt=attempt + 1, backoff_s=backoff)
+            self._sleep(backoff)
+        raise AssertionError("unreachable")
+
+    def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
+        vectors: list[list[float]] = []
+        for start in range(0, len(texts), self._batch_size):
+            vectors.extend(self._embed(list(texts[start : start + self._batch_size])))
+        return vectors
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._embed([text])[0]
+
+
+def make_embedder(model: str, cache_dir: Path, api_key: str | None = None) -> Embedder:
+    """``hash`` (tests), ``openai/<model>`` (API), or a FastEmbed model name (local)."""
     if model == "hash":
         return HashEmbedder()
+    if model.startswith("openai/"):
+        return OpenAIEmbedder(model.removeprefix("openai/"), api_key or "")
     return FastEmbedEmbedder(model, cache_dir)
+
+
+def collection_suffix(model: str) -> str:
+    """Index name part for an embedding model, so each model gets its own collection."""
+    short = model.rsplit("/", 1)[-1] if not model.startswith("openai/") else model
+    return re.sub(r"[^a-z0-9]+", "-", short.lower()).strip("-")

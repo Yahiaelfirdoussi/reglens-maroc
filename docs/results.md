@@ -11,14 +11,33 @@ Run with `reglens eval eval/golden_set.jsonl --label <name>`.
 | Date | Configuration | Hit@1 | Hit@6 | MRR@6 | Doc hit@6 | Fact recall | Abstention acc. | Notes |
 |---|---|---:|---:|---:|---:|---|---|---|
 | 2026-09-30 | **Baseline**: fixed 450-char chunks (90 overlap), dense `paraphrase-multilingual-MiniLM-L12-v2` (384-d, ONNX), Qdrant cosine, k=6 | 35.5% | 69.7% | 0.464 | 80.3% | n/a | n/a | No LLM yet (retrieval only). p50 retrieval 15 ms. |
+| 2026-09-30 | + OpenAI `text-embedding-3-small` (1536-d), same chunks | 53.9% | 89.5% | 0.686 | 90.8% | n/a | n/a | Index: 498k tokens (~$0.01). p50 retrieval 305 ms. |
+| 2026-09-30 | + OpenAI `text-embedding-3-large` (3072-d), same chunks | 71.1% | **97.4%** | **0.812** | 100.0% | n/a | n/a | Index: 498k tokens (~$0.07). p50 retrieval 394 ms. |
 
-Baseline by question language (n = 38 FR, 22 EN, 16 AR):
+Hit@6 by question language (n = 38 FR, 22 EN, 16 AR):
 
-| Language | Hit@6 | MRR@6 | Doc hit@6 |
+| Language | Baseline (MiniLM) | OpenAI 3-small | OpenAI 3-large |
 |---|---:|---:|---:|
-| French | 73.7% | 0.529 | 86.8% |
-| English | 77.3% | 0.480 | 81.8% |
-| Arabic | 50.0% | 0.289 | 62.5% |
+| French | 73.7% | 100.0% | 97.4% |
+| English | 77.3% | 90.9% | 100.0% |
+| Arabic | 50.0% | 62.5% | **93.8%** |
+
+Embedding comparison (only the embedding model changed; same 4,118 chunks, same questions):
+
+- `text-embedding-3-large` removes most baseline failures: 2 misses left (q010, q041) against
+  23 for the baseline, and every question finds the right document. The Arabic gap closes
+  (50.0% → 93.8%): the small local model was the main cause of the cross-lingual weakness.
+- `text-embedding-3-small` fixes French (100%) but leaves Arabic weak (62.5%).
+- Costs: indexing is a one-off 498k tokens; each query adds one API call, which moves
+  retrieval latency from ~15 ms (local) to ~300-400 ms (network) and requires a key and
+  network access. The local model stays the offline/CI default.
+- **Decision: `text-embedding-3-small` is the default.** Expected users ask mostly in French,
+  where 3-small reaches 100% hit@6 (above 3-large's 97.4%) at about a seventh of the cost.
+  The accepted trade-off is Arabic (62.5%); Phase 2 query rewriting (Arabic/English →
+  French legal terms) targets that gap.
+- Caveat: at 97.4% hit@6 the golden set is close to its ceiling. The questions reuse the
+  wording of the articles they target; further Phase 2 gains will need harder questions
+  (paraphrases, multi-article questions) to be measurable.
 
 What the 23 baseline misses have in common (inspected by hand):
 
