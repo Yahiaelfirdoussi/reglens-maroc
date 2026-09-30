@@ -1,12 +1,15 @@
 """Command-line interface: ``reglens ingest | ask | eval | serve``."""
 
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 
 from reglens.config import get_settings
 from reglens.log import configure_logging
+
+if TYPE_CHECKING:
+    from reglens.retrieval.retriever import Retriever
 
 app = typer.Typer(help="RegLens Maroc — grounded answers on Moroccan financial regulation.")
 
@@ -147,27 +150,117 @@ def golden_check(
         raise typer.Exit(code=1)
 
 
+def _retriever() -> "Retriever":
+    from reglens.retrieval.embeddings import make_embedder
+    from reglens.retrieval.retriever import Retriever
+    from reglens.retrieval.vector_store import QdrantStore, make_client
+
+    settings = get_settings()
+    api_key = settings.qdrant_api_key.get_secret_value() if settings.qdrant_api_key else None
+    client = make_client(settings.qdrant_url, settings.qdrant_path, api_key)
+    store = QdrantStore(client, settings.qdrant_collection)
+    if store.count() == 0:
+        typer.echo("The index is empty. Run `reglens ingest data/raw` first.", err=True)
+        raise typer.Exit(code=1)
+    return Retriever(make_embedder(settings.embedding_model, settings.model_cache_dir), store)
+
+
+def _config_snapshot() -> dict[str, object]:
+    settings = get_settings()
+    return {
+        "embedding_model": settings.embedding_model,
+        "chunking": "fixed",
+        "chunk_size": settings.chunk_size,
+        "chunk_overlap": settings.chunk_overlap,
+        "top_k": settings.top_k,
+    }
+
+
 @app.command()
 def ingest(
-    path: Annotated[Path, typer.Argument(help="Directory of PDFs + YAML sidecars.")],
+    path: Annotated[Path, typer.Argument(help="Directory of PDFs + YAML sidecars.")] = Path(
+        "data/raw"
+    ),
 ) -> None:
-    """Ingest documents into the vector store."""
-    _not_implemented("ingest", 1)
+    """Chunk, embed and index every document (rebuilds the collection)."""
+    from reglens.ingestion.pipeline import ingest as run_ingest
+    from reglens.retrieval.embeddings import make_embedder
+    from reglens.retrieval.vector_store import QdrantStore, make_client
+
+    settings = get_settings()
+    api_key = settings.qdrant_api_key.get_secret_value() if settings.qdrant_api_key else None
+    store = QdrantStore(
+        make_client(settings.qdrant_url, settings.qdrant_path, api_key),
+        settings.qdrant_collection,
+    )
+    embedder = make_embedder(settings.embedding_model, settings.model_cache_dir)
+    stats = run_ingest(path, embedder, store, settings.chunk_size, settings.chunk_overlap)
+    typer.echo(
+        f"Indexed {stats.chunks} chunks from {stats.documents} documents with {embedder.name}."
+    )
+    if stats.truncated:
+        typer.echo(
+            f"WARNING: {stats.truncated} chunks exceed the embedding model's input window; "
+            "their ends are ignored. Lower REGLENS_CHUNK_SIZE.",
+            err=True,
+        )
 
 
 @app.command()
-def ask(question: Annotated[str, typer.Argument(help="Question in FR, AR or EN.")]) -> None:
-    """Answer a question with citations."""
-    _not_implemented("ask", 1)
+def ask(
+    question: Annotated[str, typer.Argument(help="Question in FR, AR or EN.")],
+    k: Annotated[int | None, typer.Option("--k", "-k", help="Sources to retrieve.")] = None,
+) -> None:
+    """Answer a question with citations (sources only when no LLM is configured)."""
+    from reglens.generation.llm import LiteLLMClient
+    from reglens.rag import RagPipeline
+
+    settings = get_settings()
+    llm = None
+    if settings.llm_model:
+        key = settings.llm_api_key.get_secret_value() if settings.llm_api_key else None
+        llm = LiteLLMClient(settings.llm_model, key, settings.llm_timeout_s)
+    answer = RagPipeline(_retriever(), llm, k or settings.top_k).answer(question)
+
+    if answer.text is None:
+        typer.echo("No LLM configured (REGLENS_LLM_MODEL): showing the retrieved sources.\n")
+    else:
+        typer.echo(answer.text + "\n")
+    for n, scored in enumerate(answer.sources, start=1):
+        c = scored.chunk
+        pages = f"p.{c.page_start}" + (f"-{c.page_end}" if c.page_end != c.page_start else "")
+        typer.echo(f"[{n}] {c.issuer} {c.reference or '-'} {pages} (score {scored.score:.3f})")
+        typer.echo(f"    {c.text[:220]}...")
 
 
 @app.command("eval")
 def evaluate(
-    golden_set: Annotated[Path, typer.Argument(help="Path to a golden set JSONL file.")],
-    judge: Annotated[bool, typer.Option(help="Use LLM-as-judge metrics.")] = False,
+    golden_set: Annotated[Path, typer.Argument(help="Path to a golden set JSONL file.")] = Path(
+        "eval/golden_set.jsonl"
+    ),
+    k: Annotated[int | None, typer.Option("--k", "-k", help="Retrieval depth.")] = None,
+    label: Annotated[str, typer.Option(help="Name of this configuration.")] = "baseline",
+    out: Annotated[Path, typer.Option(help="Report directory.")] = Path("eval/report"),
+    judge: Annotated[bool, typer.Option(help="Use LLM-as-judge metrics (Phase 4).")] = False,
 ) -> None:
-    """Run the evaluation on a golden set."""
-    _not_implemented("eval", 1)
+    """Measure retrieval quality (hit rate, MRR) on the golden set."""
+    from reglens.evaluation.golden import load_golden
+    from reglens.evaluation.runner import evaluate_retrieval, write_report
+
+    if judge:
+        typer.echo("LLM-as-judge metrics arrive in Phase 4; running retrieval metrics only.")
+    settings = get_settings()
+    depth = k or settings.top_k
+    report = evaluate_retrieval(
+        load_golden(golden_set), _retriever(), depth, label, _config_snapshot()
+    )
+    json_path, md_path = write_report(report, out)
+    s = report.summary()
+    typer.echo(
+        f"{label}: hit@{depth} {s[f'hit@{depth}']:.1%} | MRR@{depth} {s[f'mrr@{depth}']:.3f} | "
+        f"doc hit@{depth} {s[f'doc_hit@{depth}']:.1%} | n={s['n']:.0f}"
+    )
+    typer.echo(f"Report: {md_path} and {json_path}")
 
 
 @app.command()

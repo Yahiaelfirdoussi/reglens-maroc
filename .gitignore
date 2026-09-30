@@ -20,8 +20,8 @@ htmlcov/
 data/raw/**/*.pdf
 data/raw/**/*.PDF
 data/raw/**/*.ocr.json
-eval/report/*
-!eval/report/.gitkeep
+data/qdrant/
+eval/report/
 
 # OS / editors
 .DS_Store

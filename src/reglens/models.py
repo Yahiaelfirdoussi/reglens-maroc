@@ -27,3 +27,26 @@ class DocumentMetadata(BaseModel):
     needs_review: bool = False
     # Provenance of manually curated values (e.g. which act a date comes from).
     notes: str | None = None
+
+
+class Chunk(BaseModel):
+    """A retrievable passage with the metadata needed to cite it."""
+
+    id: str
+    text: str
+    file: str  # path relative to the raw data directory
+    index: int  # position of the chunk within its document
+    page_start: int  # 1-based
+    page_end: int
+    issuer: Issuer
+    reference: str | None = None
+    title: str
+    url: str
+    language: Language | None = None
+    published: date | None = None
+    section: str | None = None
+
+
+class ScoredChunk(BaseModel):
+    chunk: Chunk
+    score: float

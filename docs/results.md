@@ -3,9 +3,33 @@
 Every retrieval, chunking or prompt change is recorded here with before/after numbers,
 measured on `eval/golden_set.jsonl`.
 
-| Date | Configuration | Hit rate@6 | MRR | Fact recall | Abstention acc. | Notes |
-|---|---|---|---|---|---|---|
-| | Baseline | | | | | |
+Metrics: a **passage hit** is a retrieved chunk from the expected document that contains at
+least 50% of the evidence quote's words (every one of the 76 answerable questions has such a
+chunk, so every miss is a real retrieval failure); **doc hit** only needs the right document.
+Run with `reglens eval eval/golden_set.jsonl --label <name>`.
+
+| Date | Configuration | Hit@1 | Hit@6 | MRR@6 | Doc hit@6 | Fact recall | Abstention acc. | Notes |
+|---|---|---:|---:|---:|---:|---|---|---|
+| 2026-09-30 | **Baseline**: fixed 450-char chunks (90 overlap), dense `paraphrase-multilingual-MiniLM-L12-v2` (384-d, ONNX), Qdrant cosine, k=6 | 35.5% | 69.7% | 0.464 | 80.3% | n/a | n/a | No LLM yet (retrieval only). p50 retrieval 15 ms. |
+
+Baseline by question language (n = 38 FR, 22 EN, 16 AR):
+
+| Language | Hit@6 | MRR@6 | Doc hit@6 |
+|---|---:|---:|---:|
+| French | 73.7% | 0.529 | 86.8% |
+| English | 77.3% | 0.480 | 81.8% |
+| Arabic | 50.0% | 0.289 | 62.5% |
+
+What the 23 baseline misses have in common (inspected by hand):
+
+- **Questions that name a reference** ("circulaire n°5/W/2017"): dense vectors do not match
+  reference strings. Expected fix: contextual header + BM25 hybrid.
+- **Arabic questions against French texts**: the small model is weak cross-lingually.
+  Expected fix: stronger multilingual embeddings, query rewriting.
+- **Amending circulars** (e.g. 2/W/2021 amends 14/G/2013): the base text outranks the
+  amendment. Expected fix: contextual header, reranking.
+- The model reads only 128 tokens (~480 French characters); 227 of 4,118 chunks (5.5%) are
+  longer in tokens and their ends are ignored.
 
 ## OCR (Phase 0)
 

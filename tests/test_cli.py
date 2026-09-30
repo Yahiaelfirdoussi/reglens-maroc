@@ -13,5 +13,5 @@ def test_help_lists_commands() -> None:
 
 
 def test_unimplemented_command_exits_nonzero() -> None:
-    result = runner.invoke(app, ["ask", "Question ?"])
+    result = runner.invoke(app, ["serve"])
     assert result.exit_code == 1
