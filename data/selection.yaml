@@ -1,0 +1,153 @@
+# Curated corpus: the documents downloaded by
+#   reglens fetch --selection data/selection.yaml
+# Chosen for thematic coverage (prudential ratios, risk management, governance, AML, customer
+# relations, capital markets). Titles in comments are for humans only.
+#
+# Optional `reference` / `published` override values parsed from the website. They are set
+# only after checking the document itself, and `notes` records where each value comes from.
+
+documents:
+  # --- BAM — Fonds propres et solvabilité (4)
+  - url: "https://www.bkam.ma/content/download/498945/4963071/1 - Circulaire14G2013.pdf"
+    # 14/G/2013 | Circulaire n°14/G/13 du 13 Août 2013 relative aux fonds propres des établissements de créd
+  - url: "https://www.bkam.ma/content/download/729060/8333850/Circ n° 2W21 modif Cir 14G2013 FP.PDF"
+    published: "2021-03-04"
+    notes: "Date from the signature line on page 1 ('Rabat, le 4 Mars 2021')."
+    # 2/W/2021 | Circulaire n° 2/W/2021 modifiant et complétant la circulaire du Wali de Bank Al-Maghrib n°
+  - url: "https://www.bkam.ma/content/download/498946/4963073/2 - Circulaire n°25G2006.pdf"
+    # 25/G/2006 | Circulaire n°25/G/2006 du 5 décembre 2006 relative au coefficient minimum de solvabilité d
+  - url: "https://www.bkam.ma/content/download/498947/4963075/3 - Circulaire n°26G2006.pdf"
+    # 26/G/2006 | Circulaire n°26/G/2006 du 5 décembre 2006 relative au calcul des exigences en fonds propre
+  # --- BAM — Liquidité et levier (5)
+  - url: "https://www.bkam.ma/content/download/498957/4963095/13 - Cir15G2013.pdf"
+    # 15/G/2013 | Circulaire n°15/G/2013 du 13 Août 2013 relative au ratio de liquidité des banques
+  - url: "https://www.bkam.ma/content/download/726980/8319171/Circulaire n° 5W21 modifiant et complétant la circulaire du Wali de Bank Al-Maghrib n°15G2013 relative au ratio de liquidité.pdf"
+    published: "2021-03-04"
+    notes: "Date from the signature line on page 1 ('Rabat, le 4 Mars 2021')."
+    # 5/W/2021 | Circulaire n° 5/W/2021 modifiant et complétant la circulaire du Wali de Bank Al-Maghrib n°
+  - url: "https://www.bkam.ma/content/download/817434/8956009/circulaire 4W2024 du 20 decembre 2024 relative au ratio structurel de liquidité à long terme.pdf"
+    # 4/W/2024 | Circulaire 4W2024 du 20 décembre 2024 relative au ratio structurel de liquidité à long ter
+  - url: "https://www.bkam.ma/content/download/817435/8956011/Directive 1W2024 du 20 decembre 2024 - gestion risuqe liquidité et evaluation adequation de liquidité interne.pdf"
+    # 1/W/2024 | Directive 1W2024 du 20 décembre 2024 - gestion risque liquidité et évaluation adéquation d
+  - url: "https://www.bkam.ma/content/download/729062/8333854/Circ n° 6W21 Ratio de levier.pdf"
+    published: "2021-03-04"
+    notes: "Date from the signature line on page 1 ('Rabat, le 4 Mars 2021')."
+    # 6/W/2021 | Circulaire n° 6/W/2021 relative au ratio de levier des banques
+  # --- BAM — Gestion des risques (8)
+  - url: "https://www.bkam.ma/content/download/498956/4963093/12 - Circ 8G12 CMDR.pdf"
+    # 8/G/2012 | Circulaire n°8/G/12 du 19 avril 2013 relative au coefficient maximum de division des risqu
+  - url: "https://www.bkam.ma/content/download/498973/4963130/24 - Directive n°48G2007.pdf"
+    # 48/G/2007 | Directive n°48/G/2007 du 31 août 2007 relative au dispositif de gestion du risque de conce
+  - url: "https://www.bkam.ma/content/download/498970/4963124/21 - Directive n°29G2007.pdf"
+    # 29/G/2007 | Directive n°29/G/2007 du 13 avril 2007 relative au dispositif de gestion des risques opéra
+  - url: "https://www.bkam.ma/content/download/729054/8333830/Circ n° 7W21  relative à l'IRRBB.PDF"
+    published: "2021-03-04"
+    notes: "Date from the signature line on page 1 ('Rabat, le 4 Mars 2021')."
+    # 7/W/2021 | Circulaire du Wali de Bank Al-Maghrib n° 7/W/2021 relative à la mesure du risque de taux d
+  - url: "https://www.bkam.ma/content/download/729052/8333826/Directive n° 3W21 ICAAP.PDF"
+    published: "2021-03-04"
+    notes: "Date from the signature line on page 1 ('Rabat, le 4 Mars 2021')."
+    # 3/W/2021 | Directive du Wali de Bank Al-Maghrib n° 3/W/2021 relative au processus d’évaluation de l’a
+  - url: "https://www.bkam.ma/content/download/498977/4963138/28 - Directive n°2G2010.pdf"
+    # 2/G/2010 | Directive n°2/G/10 du 3 mai 2010 relative à la pratique des stress tests par les banques
+  - url: "https://www.bkam.ma/content/download/498976/4963136/27 - Directive n°1G2008.pdf"
+    # 1/G/2008 | Directive n°1/G/2008 du 16 juillet 2008 relative au dispositif de gestion du risque-pays
+  - url: "https://www.bkam.ma/content/download/746620/8468987/Circulaire n° 4W2017 relative aux conditions et aux modalités d’élaboration et de présentation du plan de crise interne.pdf"
+    # 4/W/2017 | Circulaire n° 4/W/2017 du 24 juillet 2017 relative aux conditions et aux modalités d’élabo
+  # --- BAM — Gouvernance et contrôle interne (6)
+  - url: "https://www.bkam.ma/content/download/498959/4963099/15 - Cir 4W14.pdf"
+    # 4/W/2014 | Circulaire n°4/W/2014 du 30 Octobre 2014 relative au contrôle interne des établissements d
+  - url: "https://www.bkam.ma/content/download/746629/8469005/Directive n° 1W2014 du 30 octobre 2014 relative à la gouvernance au sein des établissements de crédit.pdf"
+    # 1/W/2014 | Directive n°1/W/14 du 30 octobre 2014 relative à la gouvernance au sein des établissements
+  - url: "https://www.bkam.ma/content/download/746628/8469003/Circulaire n°5W16 fixant les conditions et les modalités de désignation d’administrateurs ou membres indépendants.pdf"
+    # 5/W/2016 | Circulaire n°5/W/16 du 10 juin 2016 fixant les conditions et les modalités de désignation 
+  - url: "https://www.bkam.ma/content/download/746627/8469001/Circulaire n°4W2018  fixant les conditions et modalités de fonctionnement du comité d’audit.pdf"
+    # 4/W/2018 | Circulaire n°4/W/2018 du 27 juillet 2018 fixant les conditions et modalités de fonctionnem
+  - url: "https://www.bkam.ma/content/download/498969/4963122/20 - Directive n°49G2007.pdf"
+    # 49/G/2007 | Directive n°49/G/2007 du 31 août 2007 relative à la fonction conformité
+  - url: "https://www.bkam.ma/content/download/498968/4963120/19 - Directive n°47G2007.pdf"
+    # 47/G/2007 | Directive n°47/G/2007 du 31 août 2007 relative au plan de continuité de l’activité au sein
+  # --- BAM — Climat, cloud, corruption (3)
+  - url: "https://www.bkam.ma/content/download/729100/8334120/Directive n° 5W21 Risques financiers liés à l'environnement.pdf"
+    published: "2021-03-04"
+    notes: "Date from the signature line on page 1 ('Rabat, le 4 Mars 2021')."
+    # 5/W/2021 | Directive du Wali de Bank Al-Maghrib n° 5/W/2021 relative au dispositif de gestion des ris
+  - url: "https://www.bkam.ma/content/download/761416/8571429/D N° 4w2022 fixant les règles minimales en matière d’externalisation vers le cloud par les établissements de crédit.pdf"
+    published: "2022-05-19"
+    notes: "Date from the signature line on page 1 ('Rabat, le 19 Mai 2022')."
+    # 4/W/2022 | La directive n°4/W/2022 fixant les règles minimales en matière d'externalisation vers le c
+  - url: "https://www.bkam.ma/content/download/761415/8571427/D N° 1w2022 relative à la prévention et la gestion par les établissements de crédit des risques de corruption.pdf"
+    published: "2022-05-19"
+    notes: "Date from the signature line on page 1 ('Rabat, le 19 mai 2022')."
+    # 1/W/2022 | La directive n°1/W/2022 relative à la prévention et la gestion par les établissements de c
+  # --- BAM — Vigilance / LBC-FT (3)
+  - url: "https://www.bkam.ma/content/download/746625/8468997/Circulaire n°5W2017 relative à l’obligation de vigilance incombant aux établissements de crédit et organismes assimilés.pdf"
+    published: "2017-07-24"
+    notes: "Date from the signature line on page 1 ('Rabat, le 24 juillet 2017')."
+    # 5/W/2017 | Circulaire n°5/W/2017 relative à l’obligation de vigilance incombant aux établissements de
+  - url: "https://www.bkam.ma/content/download/746623/8468993/Directive n° 3W2019 relative à la mise en place de l’approche basée sur les risques, en matière de vigilance.pdf"
+    published: "2019-11-04"
+    notes: "Date from the signature line on page 1 ('Rabat, le 4 Novembre 2019')."
+    # 3/W/2019 | Directive n°3/W/2019 relative à la mise en place de l’approche basée sur les risques, en m
+  - url: "https://www.bkam.ma/content/download/746642/8469031/Directive n° 2W2019 relative à l’identification et la connaissance des relations d’affaires, clients occasionnels.pdf"
+    published: "2019-11-04"
+    notes: "Date from the signature line on page 1 ('Rabat, le 4 Novembre 2019')."
+    # 2/W/2019 | Directive n°2/W/2019 relative à l’identification et la connaissance des relations d’affair
+  # --- BAM — Relations établissements de crédit / clientèle (10)
+  - url: "https://www.bkam.ma/content/download/746673/8469196/Circulaire n°10 W 2016 relative aux modalités de traitement des réclamations.pdf"
+    # 10/W/2016 | Circulaire n°10/W/2016 du 10 juin 2016 relative aux modalités de traitement des réclamatio
+  - url: "https://www.bkam.ma/content/download/746662/8469174/Circulaire n° 9 W 16 modalités de fonctionnement du dispositif de médiation bancaire.pdf"
+    # 9/W/2016 | Circulaire n°9/W/16 du 10 juin 2016 relative aux modalités de fonctionnement du dispositif
+  - url: "https://www.bkam.ma/content/download/746670/8469190/Directive n° 1 G 10 relative aux services bancaires minimums.pdf"
+    # 1/G/2010 | Directive n°1/G/10 du 3 mai 2010 relative aux services bancaires minimums devant être offe
+  - url: "https://www.bkam.ma/content/download/746668/8469186/Directive n° 5 W 2019 relative à la mobilité bancaire.pdf"
+    # 5/W/2019 | Directive n°5/W/2019 du 4 novembre 2019 relative à la mobilité bancaire
+  - url: "https://www.bkam.ma/content/download/761420/8571447/D N° 2w2022 relative aux conditions et modalités de la clôture des comptes à vue.pdf"
+    published: "2022-05-19"
+    notes: "Date from the signature line on page 1 ('Rabat, le 19 Mai 2022')."
+    # 2/W/2022 | La directive n°2/W/2022 relative aux conditions et modalités de la clôture des comptes à v
+  - url: "https://www.bkam.ma/content/download/761421/8571449/D N° 3w2022 fixant les modalités d’information des demandeurs de crédit.pdf"
+    published: "2022-05-19"
+    notes: "Date from the signature line on page 1 ('Rabat, le 19 Mai 2022')."
+    # 3/W/2022 | La directive n°3/W/2022 fixant les modalités d'information des demandeurs de crédit
+  - url: "https://www.bkam.ma/content/download/746674/8469198/Circulaire n° 15 W 16  fixant les conventions types précisant les clauses minimales.pdf"
+    # 15/W/2016 | Circulaire n°15/W/16 du Wali du 18 juillet 2016 fixant les conventions types précisant les
+  - url: "https://www.bkam.ma/content/download/746669/8469188/Directive n°4 W 2019 relative aux mainlevées des sûretés.pdf"
+    # 4/W/2019 | Directive n°4/W/2019 du 4 novembre 2019 relative aux conditions et modalités de délivrance
+  - url: "https://www.bkam.ma/content/download/746676/8469202/Circulaire n°6 W 2018  relative aux conditions de versement des cotisations au FCGD.pdf"
+    # 6/W/2018 | Circulaire n°6/W/2018 du 27 juillet 2018 relative aux conditions de versement des cotisati
+  - url: "https://www.bkam.ma/content/download/498934/4963049/4 - Circ n°3G10.pdf"
+    # 3/G/2010 | Circulaire n°3/G/2010 du 03 Mai 2010 relative aux modalités d’établissement des relevés de
+  # --- AMMC — Règlements généraux et circulaires en vigueur (8)
+  - url: "https://www.ammc.ma/sites/default/files/arr%C3%AAt%C3%A9%20n%C2%B02169-16_%20approuvant_%20%20r%C3%A8glement%20_g%C3%A9n%C3%A9ral%20_AMMC-fr.pdf"
+    reference: "2169-16"
+    published: "2016-07-14"
+    notes: "Reference and date of the approving order n° 2169-16 (14 juillet 2016)."
+    # — | Règlement général de l'Autorité Marocaine du Marché des Capitaux
+  - url: "https://www.ammc.ma/sites/default/files/Re%CC%80glement_%20Ge%CC%81ne%CC%81ral_%20%20Bourse%20_des_%20valeurs.pdf"
+    published: "2019-09-05"
+    notes: "Publication date of Bulletin officiel n° 6810 (5-9-2019). The approving order is not included in this PDF, so the reference is unknown."
+    # — | Règlement Général de la Bourse des Valeurs
+  - url: "https://www.ammc.ma/sites/default/files/Circulaire%20AMMC%2002-2022%20LBC_FR.pdf"
+    # 02-2022 | Circulaire de l’Autorité marocaine du marché des capitaux n°02/2022 du 1er juin 2022 relat
+  - url: "https://www.ammc.ma/sites/default/files/Circulaire%20AMMC%20n%C2%B020-01%20relative%20aux%20Conseillers%20en%20Investissement%20Financier.pdf"
+    reference: "20-01"
+    published: "2023-01-18"
+    notes: "The official text numbers it n° 20/01 (the AMMC website lists 01/20). Date of the homologation order n° 2401-21 (18 janvier 2023)."
+    # 01-20 | Circulaire n° 01/20 relative aux conseillers en investissement financier
+  - url: "https://www.ammc.ma/sites/default/files/Circulaire%2003_19%20relative%20aux%20op%C3%A9rations%20et%20informations%20financi%C3%A8res.pdf"
+    published: "2019-02-20"
+    notes: "Date from the circular heading ('n°03/19 du 20 février 2019')."
+    # 03-19 | Circulaire de l’Autorité marocaine du marché des capitaux n° 03/19
+  - url: "https://www.ammc.ma/sites/default/files/Circulaire%20de%20l%27AMMC%2002-20%20du%2022%20D%C3%A9cembre%202020_0.pdf"
+    language: "ar"
+    notes: "The PDF is the Arabic edition of the Bulletin officiel (98% Arabic script), although the AMMC website lists it with a French title."
+    # 02-20 | Circulaire de l’AMMC n°02/20 du 22 décembre 2020 complétant et modifiant et complétant la 
+  - url: "https://www.ammc.ma/sites/default/files/Arr%C3%AAt%C3%A9%20n%C2%B0%203044-23%20portant%20homologation%20de%20la%20Circulaire%20conjointe%20sur%20les%20conglom%C3%A9rats%20financiers-%20vf_0.pdf"
+    published: "2023-12-13"
+    notes: "Circular undated in the PDF; date of the homologation order n° 3044-23 (13 décembre 2023)."
+    # 01-23 | Circulaire conjointe des autorités de contrôle du secteur financier n°01-23 relative au co
+  - url: "https://www.ammc.ma/sites/default/files/Arr%C3%AAt%C3%A9%20n%C2%B0%202072-23%20-homologation%20circulaire%20AMMC%20n%C2%B0%2001-23%20SFC%20r%C3%A9alisant%20les%20op%C3%A9rations%20de%20cat%C3%A9gorie%20investissement%20-%20vfr_0.pdf"
+    published: "2023-07-25"
+    notes: "Circular undated in the PDF; date of the homologation order n° 2072-23 (25 juillet 2023)."
+    # 01-23 | Circulaire de l’Autorité marocaine du marché des capitaux n° 01/23 relative aux sociétés d

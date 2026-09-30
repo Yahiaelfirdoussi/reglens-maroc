@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+
+# Tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets
+.env
+
+# Data (large PDFs are not committed; YAML sidecars are)
+data/raw/**/*.pdf
+data/raw/**/*.PDF
+data/raw/**/*.ocr.json
+eval/report/*
+!eval/report/.gitkeep
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/

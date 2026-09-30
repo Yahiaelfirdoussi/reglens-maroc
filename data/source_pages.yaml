@@ -1,0 +1,24 @@
+# Listing pages crawled by `reglens fetch`. Every PDF link found on a page becomes a candidate.
+# max_pages bounds pagination (pages linked with rel="next").
+#
+# Deliberately excluded: BAM "Recueil des textes législatifs et réglementaires" — a single
+# compilation PDF that duplicates the individual circulars below (would create duplicate chunks).
+
+pages:
+  - url: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+    issuer: BAM
+    language: fr
+
+  - url: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-des-relations-etablissements-de-credit-clientele
+    issuer: BAM
+    language: fr
+
+  # Default AMMC listing filter is "En vigueur" (in force); abrogated circulars are skipped.
+  - url: https://www.ammc.ma/fr/reglementations/circulaires
+    issuer: AMMC
+    language: fr
+    max_pages: 5
+
+  - url: https://www.ammc.ma/fr/reglementations/reglements-generaux
+    issuer: AMMC
+    language: fr

@@ -1,0 +1,625 @@
+documents:
+- file: ammc/ammc-circulaire-conjointe-des-autorites-de-controle-du-secteur-fi-47535741.pdf
+  title: Circulaire conjointe des autorités de contrôle du secteur financier n°01-23 relative au conglomérat
+    financier
+  issuer: AMMC
+  reference: 01-23
+  published: '2023-12-13'
+  url: https://www.ammc.ma/sites/default/files/Arr%C3%AAt%C3%A9%20n%C2%B0%203044-23%20portant%20homologation%20de%20la%20Circulaire%20conjointe%20sur%20les%20conglom%C3%A9rats%20financiers-%20vf_0.pdf
+  language: fr
+  source_page: https://www.ammc.ma/fr/reglementations/circulaires
+  sha256: dcefa82e596bbe7a7c6ef87fa5f3f01660374192e8c1b90180f5c99c9f9f21e8
+  text_source: ocr
+  needs_review: false
+  notes: Circular undated in the PDF; date of the homologation order n° 3044-23 (13 décembre 2023).
+- file: ammc/ammc-circulaire-de-lammc-n02-20-du-22-decembre-2020-completant-et-2918a2cc.pdf
+  title: Circulaire de l’AMMC n°02/20 du 22 décembre 2020 complétant et modifiant et complétant la circulaire
+    n°03/19 du 20 février 2019 relative aux opérations et informations financières
+  issuer: AMMC
+  reference: 02-20
+  published: '2020-12-22'
+  url: https://www.ammc.ma/sites/default/files/Circulaire%20de%20l%27AMMC%2002-20%20du%2022%20D%C3%A9cembre%202020_0.pdf
+  language: ar
+  source_page: https://www.ammc.ma/fr/reglementations/circulaires
+  sha256: a99d513c699f751348475e830bb57240ec032c86ce4b3352e713e6d25df787f4
+  text_source: native
+  needs_review: false
+  notes: The PDF is the Arabic edition of the Bulletin officiel (98% Arabic script), although the AMMC
+    website lists it with a French title.
+- file: ammc/ammc-circulaire-de-lautorite-marocaine-du-marche-des-capitaux-n-0-3762f87c.pdf
+  title: Circulaire de l’Autorité marocaine du marché des capitaux n° 01/23 relative aux sociétés de financement
+    collaboratif réalisant des opérations de catégorie «investissement ».
+  issuer: AMMC
+  reference: 01-23
+  published: '2023-07-25'
+  url: https://www.ammc.ma/sites/default/files/Arr%C3%AAt%C3%A9%20n%C2%B0%202072-23%20-homologation%20circulaire%20AMMC%20n%C2%B0%2001-23%20SFC%20r%C3%A9alisant%20les%20op%C3%A9rations%20de%20cat%C3%A9gorie%20investissement%20-%20vfr_0.pdf
+  language: fr
+  source_page: https://www.ammc.ma/fr/reglementations/circulaires
+  sha256: c3f4f592d0ba257f68509008c3b57b583d60083c466daf58969eb7aee45bea3d
+  text_source: native
+  needs_review: false
+  notes: Circular undated in the PDF; date of the homologation order n° 2072-23 (25 juillet 2023).
+- file: ammc/ammc-circulaire-de-lautorite-marocaine-du-marche-des-capitaux-n-0-dce2d838.pdf
+  title: Circulaire de l’Autorité marocaine du marché des capitaux n° 03/19
+  issuer: AMMC
+  reference: 03-19
+  published: '2019-02-20'
+  url: https://www.ammc.ma/sites/default/files/Circulaire%2003_19%20relative%20aux%20op%C3%A9rations%20et%20informations%20financi%C3%A8res.pdf
+  language: fr
+  source_page: https://www.ammc.ma/fr/reglementations/circulaires
+  sha256: e6f4ed76552ae2cf7424febb84711cb765910cfce679e6183dc6370996cd9095
+  text_source: ocr
+  needs_review: false
+  notes: Date from the circular heading ('n°03/19 du 20 février 2019').
+- file: ammc/ammc-circulaire-de-lautorite-marocaine-du-marche-des-capitaux-n02-457b3732.pdf
+  title: Circulaire de l’Autorité marocaine du marché des capitaux n°02/2022 du 1er juin 2022 relative
+    aux obligations de vigilance et de veille interne incombant aux organismes et personnes soumis au
+    contrôle de cette Autorité.
+  issuer: AMMC
+  reference: 02-2022
+  published: '2022-06-01'
+  url: https://www.ammc.ma/sites/default/files/Circulaire%20AMMC%2002-2022%20LBC_FR.pdf
+  language: fr
+  source_page: https://www.ammc.ma/fr/reglementations/circulaires
+  sha256: eb257b86f236d2186f0aeb8514b71895a10a90046537d06d3b96c8893e69d34b
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: ammc/ammc-circulaire-n-01-20-relative-aux-conseillers-en-investissemen-9413c3b4.pdf
+  title: Circulaire n° 01/20 relative aux conseillers en investissement financier
+  issuer: AMMC
+  reference: 20-01
+  published: '2023-01-18'
+  url: https://www.ammc.ma/sites/default/files/Circulaire%20AMMC%20n%C2%B020-01%20relative%20aux%20Conseillers%20en%20Investissement%20Financier.pdf
+  language: fr
+  source_page: https://www.ammc.ma/fr/reglementations/circulaires
+  sha256: c7166e1b6d5c466a6c764ba3d550ac18171a58e9254aea247e3c0b89743474ae
+  text_source: ocr
+  needs_review: false
+  notes: The official text numbers it n° 20/01 (the AMMC website lists 01/20). Date of the homologation
+    order n° 2401-21 (18 janvier 2023).
+- file: ammc/ammc-reglement-general-de-l-autorite-marocaine-du-marche-des-capi-b9d262ca.pdf
+  title: Règlement général de l'Autorité Marocaine du Marché des Capitaux
+  issuer: AMMC
+  reference: 2169-16
+  published: '2016-07-14'
+  url: https://www.ammc.ma/sites/default/files/arr%C3%AAt%C3%A9%20n%C2%B02169-16_%20approuvant_%20%20r%C3%A8glement%20_g%C3%A9n%C3%A9ral%20_AMMC-fr.pdf
+  language: fr
+  source_page: https://www.ammc.ma/fr/reglementations/reglements-generaux
+  sha256: face29e25e1d00c7f2e26156742c4d181e375b8986743b7c379eccda0e0bcddd
+  text_source: ocr
+  needs_review: false
+  notes: Reference and date of the approving order n° 2169-16 (14 juillet 2016).
+- file: ammc/ammc-reglement-general-de-la-bourse-des-valeurs-e4024fd5.pdf
+  title: Règlement Général de la Bourse des Valeurs
+  issuer: AMMC
+  reference: null
+  published: '2019-09-05'
+  url: https://www.ammc.ma/sites/default/files/Re%CC%80glement_%20Ge%CC%81ne%CC%81ral_%20%20Bourse%20_des_%20valeurs.pdf
+  language: fr
+  source_page: https://www.ammc.ma/fr/reglementations/reglements-generaux
+  sha256: 2e6376f82d4b41a67723ff37003a61e35d2f27f1949e884e2ad0a1ccf6b149b0
+  text_source: ocr
+  needs_review: true
+  notes: Publication date of Bulletin officiel n° 6810 (5-9-2019). The approving order is not included
+    in this PDF, so the reference is unknown.
+- file: bam/bam-circulaire-4w2024-du-20-decembre-2024-relative-au-ratio-stru-529f8ac0.pdf
+  title: Circulaire 4W2024 du 20 décembre 2024 relative au ratio structurel de liquidité à long terme
+  issuer: BAM
+  reference: 4/W/2024
+  published: '2024-12-20'
+  url: https://www.bkam.ma/content/download/817434/8956009/circulaire 4W2024 du 20 decembre 2024 relative
+    au ratio structurel de liquidité à long terme.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 752e5608d9fdcf7915535f279ca6dc67bb8f4bbd224779457cec8921d9f35fab
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: bam/bam-circulaire-du-wali-de-bank-al-maghrib-n-7-w-2021-relative-a-d0a28bf2.pdf
+  title: Circulaire du Wali de Bank Al-Maghrib n° 7/W/2021 relative à la mesure du risque de taux d’intérêt
+    inhérent au portefeuille bancaire
+  issuer: BAM
+  reference: 7/W/2021
+  published: '2021-03-04'
+  url: https://www.bkam.ma/content/download/729054/8333830/Circ n° 7W21  relative à l'IRRBB.PDF
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: ea7e08912a6941da59b8de29ab7443ac963412b20f7d50205fae680701c804fc
+  text_source: ocr
+  needs_review: false
+  notes: Date from the signature line on page 1 ('Rabat, le 4 Mars 2021').
+- file: bam/bam-circulaire-n-2-w-2021-modifiant-et-completant-la-circulaire-9e7b88b9.pdf
+  title: Circulaire n° 2/W/2021 modifiant et complétant la circulaire du Wali de Bank Al-Maghrib n°14/G/2013
+    relative aux fonds propres des établissements de crédit
+  issuer: BAM
+  reference: 2/W/2021
+  published: '2021-03-04'
+  url: https://www.bkam.ma/content/download/729060/8333850/Circ n° 2W21 modif Cir 14G2013 FP.PDF
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 7f1b9662e4f985de8928cc86a763952462ee245b0f8d9f02c131ae046433e3e5
+  text_source: ocr
+  needs_review: false
+  notes: Date from the signature line on page 1 ('Rabat, le 4 Mars 2021').
+- file: bam/bam-circulaire-n-4-w-2017-du-24-juillet-2017-relative-aux-condit-10b9b714.pdf
+  title: Circulaire n° 4/W/2017 du 24 juillet 2017 relative aux conditions et aux modalités d’élaboration
+    et de présentation du plan dit « plan de redressement de crise interne » par les établissements de
+    crédit
+  issuer: BAM
+  reference: 4/W/2017
+  published: '2017-07-24'
+  url: https://www.bkam.ma/content/download/746620/8468987/Circulaire n° 4W2017 relative aux conditions
+    et aux modalités d’élaboration et de présentation du plan de crise interne.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 0f1ea8edcafc45063c78266e97c4dc156aef956d83d4011a829e88671317cdd3
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: bam/bam-circulaire-n-5-w-2021-modifiant-et-completant-la-circulaire-61276eb7.pdf
+  title: Circulaire n° 5/W/2021 modifiant et complétant la circulaire du Wali de Bank Al-Maghrib n° 15/G/2013
+    relative au ratio de liquidité des banques ;
+  issuer: BAM
+  reference: 5/W/2021
+  published: '2021-03-04'
+  url: https://www.bkam.ma/content/download/726980/8319171/Circulaire n° 5W21 modifiant et complétant
+    la circulaire du Wali de Bank Al-Maghrib n°15G2013 relative au ratio de liquidité.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 9aa43275b12a3529dcc9e367c709f20945848aeb3ac31dd9ab2b17ffe87a4bbe
+  text_source: ocr
+  needs_review: false
+  notes: Date from the signature line on page 1 ('Rabat, le 4 Mars 2021').
+- file: bam/bam-circulaire-n-6-w-2021-relative-au-ratio-de-levier-des-banque-5922abc7.pdf
+  title: Circulaire n° 6/W/2021 relative au ratio de levier des banques
+  issuer: BAM
+  reference: 6/W/2021
+  published: '2021-03-04'
+  url: https://www.bkam.ma/content/download/729062/8333854/Circ n° 6W21 Ratio de levier.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: c1cccc98779e7c2ef15e2dd2bacc98a6c71af363faa70e6bcb2855d078a112ff
+  text_source: ocr
+  needs_review: false
+  notes: Date from the signature line on page 1 ('Rabat, le 4 Mars 2021').
+- file: bam/bam-circulaire-n10-w-2016-du-10-juin-2016-relative-aux-modalites-efce4478.pdf
+  title: Circulaire n°10/W/2016 du 10 juin 2016 relative aux modalités de traitement des réclamations
+    de la clientèle des établissements de crédit
+  issuer: BAM
+  reference: 10/W/2016
+  published: '2016-06-10'
+  url: https://www.bkam.ma/content/download/746673/8469196/Circulaire n°10 W 2016 relative aux modalités
+    de traitement des réclamations.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-des-relations-etablissements-de-credit-clientele
+  sha256: b50641e7418f32fa06edd72e7676a5d36c631771344d5759a7a10c5d45721c09
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: bam/bam-circulaire-n14-g-13-du-13-aout-2013-relative-aux-fonds-propr-0d9b59ba.pdf
+  title: Circulaire n°14/G/13 du 13 Août 2013 relative aux fonds propres des établissements de crédit
+  issuer: BAM
+  reference: 14/G/2013
+  published: '2013-08-13'
+  url: https://www.bkam.ma/content/download/498945/4963071/1 - Circulaire14G2013.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: df80954b9bcce293ea877b3002637bc349fff576d4027698ee1d5a876fe7b314
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: bam/bam-circulaire-n15-g-2013-du-13-aout-2013-relative-au-ratio-de-l-fe01f84f.pdf
+  title: Circulaire n°15/G/2013 du 13 Août 2013 relative au ratio de liquidité des banques
+  issuer: BAM
+  reference: 15/G/2013
+  published: '2013-08-13'
+  url: https://www.bkam.ma/content/download/498957/4963095/13 - Cir15G2013.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 1581d1c41b10cb1de805a29d9524335da65a362f4d24d0fcfb1a9ae10816ca1f
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: bam/bam-circulaire-n15-w-16-du-wali-du-18-juillet-2016-fixant-les-co-6538f0b3.pdf
+  title: Circulaire n°15/W/16 du Wali du 18 juillet 2016 fixant les conventions types précisant les clauses
+    minimales du compte à vue, à terme et de comptes titres
+  issuer: BAM
+  reference: 15/W/2016
+  published: '2016-07-18'
+  url: https://www.bkam.ma/content/download/746674/8469198/Circulaire n° 15 W 16  fixant les conventions
+    types précisant les clauses minimales.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-des-relations-etablissements-de-credit-clientele
+  sha256: 437f77ba76aa0a3a549e9c7a98ed3b627f6005a8edf8788f913febcdbd4329f3
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: bam/bam-circulaire-n25-g-2006-du-5-decembre-2006-relative-au-coeffic-fc2b3496.pdf
+  title: Circulaire n°25/G/2006 du 5 décembre 2006 relative au coefficient minimum de solvabilité des
+    établissements de crédit
+  issuer: BAM
+  reference: 25/G/2006
+  published: '2006-12-05'
+  url: https://www.bkam.ma/content/download/498946/4963073/2 - Circulaire n°25G2006.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 905948188d1bf486e336a19d421650881f75e765454076dc2073cdade2dc7963
+  text_source: native
+  needs_review: false
+  notes: null
+- file: bam/bam-circulaire-n26-g-2006-du-5-decembre-2006-relative-au-calcul-a2f0e5bd.pdf
+  title: Circulaire n°26/G/2006 du 5 décembre 2006 relative au calcul des exigences en fonds propres selon
+    l’approche standard pour la couverture des risques de crédit, de marché et opérationnels des établissements
+    de crédit
+  issuer: BAM
+  reference: 26/G/2006
+  published: '2006-12-05'
+  url: https://www.bkam.ma/content/download/498947/4963075/3 - Circulaire n°26G2006.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: f8bf98823e7bc27be3db4f0385a64989715df126830126d4cc26269b16d78abd
+  text_source: native
+  needs_review: false
+  notes: null
+- file: bam/bam-circulaire-n3-g-2010-du-03-mai-2010-relative-aux-modalites-d-503bd0b7.pdf
+  title: Circulaire n°3/G/2010 du 03 Mai 2010 relative aux modalités d’établissement des relevés de compte
+    de dépôts
+  issuer: BAM
+  reference: 3/G/2010
+  published: '2010-05-03'
+  url: https://www.bkam.ma/content/download/498934/4963049/4 - Circ n°3G10.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-des-relations-etablissements-de-credit-clientele
+  sha256: 8d1dc123017f10b189aef6a3afd61a547358bf9c3888e68ba3171f7539cddd1c
+  text_source: native
+  needs_review: false
+  notes: null
+- file: bam/bam-circulaire-n4-w-2014-du-30-octobre-2014-relative-au-controle-7a1102da.pdf
+  title: Circulaire n°4/W/2014 du 30 Octobre 2014 relative au contrôle interne des établissements de crédit
+  issuer: BAM
+  reference: 4/W/2014
+  published: '2014-10-30'
+  url: https://www.bkam.ma/content/download/498959/4963099/15 - Cir 4W14.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 20891e9d2e2226de0e342b4ea9b2f0c419bd95bfb3e5987ca28991ff58811fb6
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: bam/bam-circulaire-n4-w-2018-du-27-juillet-2018-fixant-les-condition-e7556734.pdf
+  title: Circulaire n°4/W/2018 du 27 juillet 2018 fixant les conditions et modalités de fonctionnement
+    du comité d’audit chargé d’assurer la surveillance et l’évaluation de la mise en œuvre des dispositifs
+    de contrôle interne
+  issuer: BAM
+  reference: 4/W/2018
+  published: '2018-07-27'
+  url: https://www.bkam.ma/content/download/746627/8469001/Circulaire n°4W2018  fixant les conditions
+    et modalités de fonctionnement du comité d’audit.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 2baeaa663a20130cad69cb6a2b1ca85a0989be1a46a6bbd429e48cefb12ba5b2
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: bam/bam-circulaire-n5-w-16-du-10-juin-2016-fixant-les-conditions-et-c251103a.pdf
+  title: Circulaire n°5/W/16 du 10 juin 2016 fixant les conditions et les modalités de désignation d’administrateurs
+    ou membres indépendants au sein de l’organe d’administration des établissements de crédit
+  issuer: BAM
+  reference: 5/W/2016
+  published: '2016-06-10'
+  url: https://www.bkam.ma/content/download/746628/8469003/Circulaire n°5W16 fixant les conditions et
+    les modalités de désignation d’administrateurs ou membres indépendants.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: cd87c6d17f5888e50f38dd200d390c133d4170a73f79a0b89303e8c3594fe699
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: bam/bam-circulaire-n5-w-2017-relative-a-lobligation-de-vigilance-inc-5ef69f83.pdf
+  title: Circulaire n°5/W/2017 relative à l’obligation de vigilance incombant aux établissements de crédit
+    et organismes assimilés, telle que modifiée et complétée par la circulaire n°3/W/2019
+  issuer: BAM
+  reference: 5/W/2017
+  published: '2017-07-24'
+  url: https://www.bkam.ma/content/download/746625/8468997/Circulaire n°5W2017 relative à l’obligation
+    de vigilance incombant aux établissements de crédit et organismes assimilés.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: e3b37f1d15b3a3e24375f57cee294bfa085ac2b065f5151cc40c3255802c20c7
+  text_source: ocr
+  needs_review: false
+  notes: Date from the signature line on page 1 ('Rabat, le 24 juillet 2017').
+- file: bam/bam-circulaire-n6-w-2018-du-27-juillet-2018-relative-aux-conditi-b97054df.pdf
+  title: Circulaire n°6/W/2018 du 27 juillet 2018 relative aux conditions de versement des cotisations
+    au fonds collectif de garantie des dépôts
+  issuer: BAM
+  reference: 6/W/2018
+  published: '2018-07-27'
+  url: https://www.bkam.ma/content/download/746676/8469202/Circulaire n°6 W 2018  relative aux conditions
+    de versement des cotisations au FCGD.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-des-relations-etablissements-de-credit-clientele
+  sha256: 8a7c632134852ccc0b1160e335410e04bf1dfd32a763822250794a65c9733de2
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: bam/bam-circulaire-n8-g-12-du-19-avril-2013-relative-au-coefficient-ebd6438e.pdf
+  title: Circulaire n°8/G/12 du 19 avril 2013 relative au coefficient maximum de division des risques
+    des établissements de crédit
+  issuer: BAM
+  reference: 8/G/2012
+  published: '2013-04-19'
+  url: https://www.bkam.ma/content/download/498956/4963093/12 - Circ 8G12 CMDR.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: ee8c5c83e5ad8ccd94469f169a13c4e9cf560911eb49093790778ec6d2de4bb8
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: bam/bam-circulaire-n9-w-16-du-10-juin-2016-relative-aux-modalites-de-c9886fa8.pdf
+  title: Circulaire n°9/W/16 du 10 juin 2016 relative aux modalités de fonctionnement du dispositif de
+    médiation bancaire
+  issuer: BAM
+  reference: 9/W/2016
+  published: '2016-06-10'
+  url: https://www.bkam.ma/content/download/746662/8469174/Circulaire n° 9 W 16 modalités de fonctionnement
+    du dispositif de médiation bancaire.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-des-relations-etablissements-de-credit-clientele
+  sha256: 9242b4caeebd0535353aff9b8b2acacc75936dc8b7e9f615f58fbd2769f7b4c2
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: bam/bam-directive-1w2024-du-20-decembre-2024-gestion-risque-liquidit-7f672952.pdf
+  title: Directive 1W2024 du 20 décembre 2024 - gestion risque liquidité et évaluation adéquation de liquidité
+    interne
+  issuer: BAM
+  reference: 1/W/2024
+  published: '2024-12-20'
+  url: https://www.bkam.ma/content/download/817435/8956011/Directive 1W2024 du 20 decembre 2024 - gestion
+    risuqe liquidité et evaluation adequation de liquidité interne.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: dc3a6e4a1d4a5597d1557cd0895c5a3aaf9489d01f932a4043b86947a03f6e7c
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: bam/bam-directive-du-wali-de-bank-al-maghrib-n-3-w-2021-relative-au-9562f90c.pdf
+  title: Directive du Wali de Bank Al-Maghrib n° 3/W/2021 relative au processus d’évaluation de l’adéquation
+    des fonds propres internes
+  issuer: BAM
+  reference: 3/W/2021
+  published: '2021-03-04'
+  url: https://www.bkam.ma/content/download/729052/8333826/Directive n° 3W21 ICAAP.PDF
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 51e8d6ef933108c970b2e22414c984881ddd2ac4ca59b768e930c063c1ea17f9
+  text_source: ocr
+  needs_review: false
+  notes: Date from the signature line on page 1 ('Rabat, le 4 Mars 2021').
+- file: bam/bam-directive-du-wali-de-bank-al-maghrib-n-5-w-2021-relative-au-43107f12.pdf
+  title: Directive du Wali de Bank Al-Maghrib n° 5/W/2021 relative au dispositif de gestion des risques
+    financiers liés au changement climatique et à l’environnement
+  issuer: BAM
+  reference: 5/W/2021
+  published: '2021-03-04'
+  url: https://www.bkam.ma/content/download/729100/8334120/Directive n° 5W21 Risques financiers liés à
+    l'environnement.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 330583f264b238482c3ac3ab0844a1263f7c10c6b844d95858f2a7e40523d9ab
+  text_source: ocr
+  needs_review: false
+  notes: Date from the signature line on page 1 ('Rabat, le 4 Mars 2021').
+- file: bam/bam-directive-n1-g-10-du-3-mai-2010-relative-aux-services-bancai-04d2da5e.pdf
+  title: Directive n°1/G/10 du 3 mai 2010 relative aux services bancaires minimums devant être offerts
+    par les banques à leur clientèle, à titre gratuit
+  issuer: BAM
+  reference: 1/G/2010
+  published: '2010-05-03'
+  url: https://www.bkam.ma/content/download/746670/8469190/Directive n° 1 G 10 relative aux services bancaires
+    minimums.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-des-relations-etablissements-de-credit-clientele
+  sha256: 3184e851f405aa025877f264770b3f460a054217832cbbaca40b8978a95ea52c
+  text_source: native
+  needs_review: false
+  notes: null
+- file: bam/bam-directive-n1-g-2008-du-16-juillet-2008-relative-au-dispositi-d6932c15.pdf
+  title: Directive n°1/G/2008 du 16 juillet 2008 relative au dispositif de gestion du risque-pays
+  issuer: BAM
+  reference: 1/G/2008
+  published: '2008-07-16'
+  url: https://www.bkam.ma/content/download/498976/4963136/27 - Directive n°1G2008.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 4ceb1c213332ade34a18d960d097c6c73876c46697f1c14f039a279930c72324
+  text_source: native
+  needs_review: false
+  notes: null
+- file: bam/bam-directive-n1-w-14-du-30-octobre-2014-relative-a-la-gouvernan-9795d4ca.pdf
+  title: Directive n°1/W/14 du 30 octobre 2014 relative à la gouvernance au sein des établissements de
+    crédit
+  issuer: BAM
+  reference: 1/W/2014
+  published: '2014-10-30'
+  url: https://www.bkam.ma/content/download/746629/8469005/Directive n° 1W2014 du 30 octobre 2014 relative
+    à la gouvernance au sein des établissements de crédit.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 7ca92b79397acd87a0a834e05b6c3b5a6278224332f47fec05b691a3e43ca809
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: bam/bam-directive-n2-g-10-du-3-mai-2010-relative-a-la-pratique-des-s-45e48ab8.pdf
+  title: Directive n°2/G/10 du 3 mai 2010 relative à la pratique des stress tests par les banques
+  issuer: BAM
+  reference: 2/G/2010
+  published: '2010-05-03'
+  url: https://www.bkam.ma/content/download/498977/4963138/28 - Directive n°2G2010.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 5b7f1a80966c4b2881da3206fc228ceab65d1e8d7ea72c027d5f808405fd1008
+  text_source: native
+  needs_review: false
+  notes: null
+- file: bam/bam-directive-n2-w-2019-relative-a-lidentification-et-la-connais-4938120f.pdf
+  title: Directive n°2/W/2019 relative à l’identification et la connaissance des relations d’affaires,
+    clients occasionnels et bénéficiaires effectifs
+  issuer: BAM
+  reference: 2/W/2019
+  published: '2019-11-04'
+  url: https://www.bkam.ma/content/download/746642/8469031/Directive n° 2W2019 relative à l’identification
+    et la connaissance des relations d’affaires, clients occasionnels.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: bb70b0bf8366e220889efd182e13ace7a057abc11d2057fd7a480dffe58fac02
+  text_source: ocr
+  needs_review: false
+  notes: Date from the signature line on page 1 ('Rabat, le 4 Novembre 2019').
+- file: bam/bam-directive-n29-g-2007-du-13-avril-2007-relative-au-dispositif-ffc645c5.pdf
+  title: Directive n°29/G/2007 du 13 avril 2007 relative au dispositif de gestion des risques opérationnels
+  issuer: BAM
+  reference: 29/G/2007
+  published: '2007-04-13'
+  url: https://www.bkam.ma/content/download/498970/4963124/21 - Directive n°29G2007.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 2485074120e5ae44208c9ebf3f152b018bc8449a1c00cbe6783d3d8a83e669e5
+  text_source: native
+  needs_review: false
+  notes: null
+- file: bam/bam-directive-n3-w-2019-relative-a-la-mise-en-place-de-lapproche-0478184e.pdf
+  title: Directive n°3/W/2019 relative à la mise en place de l’approche basée sur les risques, en matière
+    d’obligation de vigilance incombant aux établissements de crédit et organismes assimilés
+  issuer: BAM
+  reference: 3/W/2019
+  published: '2019-11-04'
+  url: https://www.bkam.ma/content/download/746623/8468993/Directive n° 3W2019 relative à la mise en place
+    de l’approche basée sur les risques, en matière de vigilance.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: cae5355d669101f1e7a2a4b3013b49e11e82eec85f00797beb486e4978cf53eb
+  text_source: ocr
+  needs_review: false
+  notes: Date from the signature line on page 1 ('Rabat, le 4 Novembre 2019').
+- file: bam/bam-directive-n4-w-2019-du-4-novembre-2019-relative-aux-conditio-dbdd7862.pdf
+  title: Directive n°4/W/2019 du 4 novembre 2019 relative aux conditions et modalités de délivrance des
+    mainlevées des suretés garantissant un financement bancaire
+  issuer: BAM
+  reference: 4/W/2019
+  published: '2019-11-04'
+  url: https://www.bkam.ma/content/download/746669/8469188/Directive n°4 W 2019 relative aux mainlevées
+    des sûretés.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-des-relations-etablissements-de-credit-clientele
+  sha256: a5c101512deb55369e5116588e49914733f7ce07cd1c3aecec149b89f1c067de
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: bam/bam-directive-n47-g-2007-du-31-aout-2007-relative-au-plan-de-con-fc05513b.pdf
+  title: Directive n°47/G/2007 du 31 août 2007 relative au plan de continuité de l’activité au sein des
+    établissements de crédit
+  issuer: BAM
+  reference: 47/G/2007
+  published: '2007-08-31'
+  url: https://www.bkam.ma/content/download/498968/4963120/19 - Directive n°47G2007.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: ca396a3666b9dc56aac8a828521f9b51e6c795d2365547e1a80706b4641dd98a
+  text_source: native
+  needs_review: false
+  notes: null
+- file: bam/bam-directive-n48-g-2007-du-31-aout-2007-relative-au-dispositif-37efd7f8.pdf
+  title: Directive n°48/G/2007 du 31 août 2007 relative au dispositif de gestion du risque de concentration
+    du crédit
+  issuer: BAM
+  reference: 48/G/2007
+  published: '2007-08-31'
+  url: https://www.bkam.ma/content/download/498973/4963130/24 - Directive n°48G2007.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 710b011f96c12bcc022476558bae7d539c309b9b29d4456ec7d124664cfb9f67
+  text_source: native
+  needs_review: false
+  notes: null
+- file: bam/bam-directive-n49-g-2007-du-31-aout-2007-relative-a-la-fonction-f0b30801.pdf
+  title: Directive n°49/G/2007 du 31 août 2007 relative à la fonction conformité
+  issuer: BAM
+  reference: 49/G/2007
+  published: '2007-08-31'
+  url: https://www.bkam.ma/content/download/498969/4963122/20 - Directive n°49G2007.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: a38b17f2a58ee77bc7210a3de7f24ebbe9f3ff64c177a0070fa6fc9137c87225
+  text_source: native
+  needs_review: false
+  notes: null
+- file: bam/bam-directive-n5-w-2019-du-4-novembre-2019-relative-a-la-mobilit-86878ee1.pdf
+  title: Directive n°5/W/2019 du 4 novembre 2019 relative à la mobilité bancaire
+  issuer: BAM
+  reference: 5/W/2019
+  published: '2019-11-04'
+  url: https://www.bkam.ma/content/download/746668/8469186/Directive n° 5 W 2019 relative à la mobilité
+    bancaire.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-des-relations-etablissements-de-credit-clientele
+  sha256: 25faacfcee6fe6e758e1b51be8160f069fd60901d16158e150da13af43b079c1
+  text_source: ocr
+  needs_review: false
+  notes: null
+- file: bam/bam-la-directive-n1-w-2022-relative-a-la-prevention-et-la-gestio-80fbfea4.pdf
+  title: La directive n°1/W/2022 relative à la prévention et la gestion par les établissements de crédit
+    des risques de corruption
+  issuer: BAM
+  reference: 1/W/2022
+  published: '2022-05-19'
+  url: https://www.bkam.ma/content/download/761415/8571427/D N° 1w2022 relative à la prévention et la
+    gestion par les établissements de crédit des risques de corruption.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 34232931f223e0bd41501425ea53698a2549e7f7b1328a311199c95179a482a5
+  text_source: ocr
+  needs_review: false
+  notes: Date from the signature line on page 1 ('Rabat, le 19 mai 2022').
+- file: bam/bam-la-directive-n2-w-2022-relative-aux-conditions-et-modalites-da295fea.pdf
+  title: La directive n°2/W/2022 relative aux conditions et modalités de la clôture des comptes à vue
+  issuer: BAM
+  reference: 2/W/2022
+  published: '2022-05-19'
+  url: https://www.bkam.ma/content/download/761420/8571447/D N° 2w2022 relative aux conditions et modalités
+    de la clôture des comptes à vue.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-des-relations-etablissements-de-credit-clientele
+  sha256: cec6f602150735a6e0b28fbcb2aedfc0b17c4417c43569b55154c03527df9d99
+  text_source: ocr
+  needs_review: false
+  notes: Date from the signature line on page 1 ('Rabat, le 19 Mai 2022').
+- file: bam/bam-la-directive-n3-w-2022-fixant-les-modalites-d-information-de-bd291e1b.pdf
+  title: La directive n°3/W/2022 fixant les modalités d'information des demandeurs de crédit
+  issuer: BAM
+  reference: 3/W/2022
+  published: '2022-05-19'
+  url: https://www.bkam.ma/content/download/761421/8571449/D N° 3w2022 fixant les modalités d’information
+    des demandeurs de crédit.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-des-relations-etablissements-de-credit-clientele
+  sha256: 0f6bfc31bcb701dc2b70112fc1d87774f43031728a727ef878d68303e8bd3096
+  text_source: ocr
+  needs_review: false
+  notes: Date from the signature line on page 1 ('Rabat, le 19 Mai 2022').
+- file: bam/bam-la-directive-n4-w-2022-fixant-les-regles-minimales-en-matier-13eca6db.pdf
+  title: La directive n°4/W/2022 fixant les règles minimales en matière d'externalisation vers le cloud
+    par les établissements de crédit
+  issuer: BAM
+  reference: 4/W/2022
+  published: '2022-05-19'
+  url: https://www.bkam.ma/content/download/761416/8571429/D N° 4w2022 fixant les règles minimales en
+    matière d’externalisation vers le cloud par les établissements de crédit.pdf
+  language: fr
+  source_page: https://www.bkam.ma/Trouvez-l-information-concernant/Reglementation/Activite-des-etablissements-de-credit-et-assimiles/Reglementation-prudentielle
+  sha256: 4603e09271b59c41aa9e2134f1ed93a3f1bb79d791192b678b86c07616990b8d
+  text_source: ocr
+  needs_review: false
+  notes: Date from the signature line on page 1 ('Rabat, le 19 Mai 2022').
