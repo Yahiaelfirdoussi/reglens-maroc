@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     chunking: Literal["fixed", "legal"] = "fixed"
     chunk_size: int = 450
     chunk_overlap: int = 90
+    # Context prepended to each chunk before embedding: "off", "full"
+    # (issuer | reference | title | section) or "ref" (issuer | reference | section).
+    contextual_header: Literal["off", "full", "ref"] = "off"
 
     top_k: int = 6
 
@@ -51,6 +54,8 @@ class Settings(BaseSettings):
         name = f"{self.qdrant_collection}__{collection_suffix(self.embedding_model)}"
         if (self.chunking, self.chunk_size, self.chunk_overlap) != ("fixed", 450, 90):
             name += f"__{self.chunking}{self.chunk_size}-{self.chunk_overlap}"
+        if self.contextual_header != "off":
+            name += "__hdr" if self.contextual_header == "full" else "__hdrref"
         return name
 
     def embedder_api_key(self) -> str | None:

@@ -45,6 +45,13 @@ class Chunk(BaseModel):
     language: Language | None = None
     published: date | None = None
     section: str | None = None
+    # Context prepended for embedding only ("BAM | 14/G/2013 | <title> | Article 4"); the
+    # stored text stays the official wording used for citations.
+    header: str | None = None
+
+    @property
+    def embedding_text(self) -> str:
+        return f"{self.header}\n{self.text}" if self.header else self.text
 
 
 class ScoredChunk(BaseModel):

@@ -146,3 +146,25 @@ carry labels).
 - One question is worth ~1 point; differences of 1-2 points are within noise.
 - Arabic stays weak whatever the chunking: the target of the query-rewriting step.
 - **Decision:** article chunking (≤1,200 / 200) becomes the default.
+
+## Phase 2, step 2: contextual header (rejected)
+
+Each chunk embedded with a deterministic header before its text (the stored text stays the
+official wording). Same setup as step 1: article chunks ≤1,200 / 200, `text-embedding-3-small`.
+
+| Header before embedding | Hit@1 | Hit@3 | Hit@6 | MRR@6 | Doc hit@6 | Hard hit@6 | FR hit@6 | AR hit@6 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **None (step 1, kept)** | 63.5% | 84.4% | **87.5%** | **0.732** | **90.6%** | **85.0%** | **100%** | 55.0% |
+| Full: issuer \| reference \| title \| article | 61.5% | 78.1% | 83.3% | 0.701 | 86.5% | 75.0% | 89.4% | 60.0% |
+| Short: issuer \| reference \| article | 57.3% | 77.1% | 84.4% | 0.680 | 88.5% | 80.0% | 97.9% | 45.0% |
+
+- **Both headers lower every main metric**, so per the project rule the change is not kept
+  (`REGLENS_CONTEXTUAL_HEADER` stays `off`; the option remains for later experiments).
+- Why (inspected): every chunk of a document shares the same header, so chunks of one
+  document look alike and the article body counts less. Results crowd into fewer
+  documents (2.25 distinct documents in the top 6 vs 2.92 without a header). Example: q022
+  (software deduction in amendment 2/W/2021) returns six chunks of the base circular
+  14/G/2013, whose title matches the topic.
+- The full header helped a few Arabic questions (q066, q086) but lost more elsewhere.
+- Takeaway: metadata belongs in exact-match channels (BM25 over references, filters)
+  rather than in the dense vector; this informs the hybrid-search step.

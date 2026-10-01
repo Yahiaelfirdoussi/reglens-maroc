@@ -88,6 +88,26 @@ def test_failed_ingest_keeps_the_existing_index(corpus: Path, retriever: Retriev
     assert store.count() == before
 
 
+def test_contextual_header_is_embedded_but_not_stored_as_text(corpus: Path) -> None:
+    store = QdrantStore(make_client(None, Path(":memory:")), "hdr")
+    seen: list[str] = []
+
+    class RecordingEmbedder(HashEmbedder):
+        def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
+            seen.extend(texts)
+            return super().embed_documents(texts)
+
+    ingest(
+        corpus, RecordingEmbedder(), store, size=300, overlap=50, strategy="legal", header="full"
+    )
+    hit = Retriever(HashEmbedder(), store).retrieve("ratio de liquidité 999 %", k=1)[0].chunk
+    assert hit.header == (
+        "BAM | 99/Z/2099 | Texte bam/fictional-liquidite.pdf FICTIONAL | Articles 1-2"
+    )  # two short fictional articles are merged
+    assert hit.text.startswith("Article 1")  # stored text is the official wording only
+    assert any(t.startswith(hit.header + "\n" + "Article 1") for t in seen)
+
+
 def test_chunk_ids_are_stable() -> None:
     assert chunk_id("bam/x.pdf", 3) == chunk_id("bam/x.pdf", 3) != chunk_id("bam/x.pdf", 4)
 

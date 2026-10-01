@@ -175,6 +175,7 @@ def _config_snapshot() -> dict[str, object]:
     return {
         "embedding_model": settings.embedding_model,
         "chunking": settings.chunking,
+        "contextual_header": settings.contextual_header,
         "chunk_size": settings.chunk_size,
         "chunk_overlap": settings.chunk_overlap,
         "top_k": settings.top_k,
@@ -208,6 +209,7 @@ def ingest(
         settings.chunk_size,
         settings.chunk_overlap,
         strategy=settings.chunking,
+        header=settings.contextual_header,
     )
     typer.echo(
         f"Indexed {stats.chunks} chunks from {stats.documents} documents with {embedder.name} "
