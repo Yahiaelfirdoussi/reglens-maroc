@@ -56,4 +56,5 @@ class Chunk(BaseModel):
 
 class ScoredChunk(BaseModel):
     chunk: Chunk
-    score: float
+    score: float  # final score (the reranker's when reranking is on)
+    first_stage_score: float | None = None  # search score before reranking

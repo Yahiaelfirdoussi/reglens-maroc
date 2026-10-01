@@ -31,7 +31,7 @@ Embedding comparison (only the embedding model changed; same 4,118 chunks, same 
 - Costs: indexing is a one-off 498k tokens; each query adds one API call, which moves
   retrieval latency from ~15 ms (local) to ~300-400 ms (network) and requires a key and
   network access. The local model stays the offline/CI default.
-- **Decision: `text-embedding-3-small` is the default.** Expected users ask mostly in French,
+- **Decision (later superseded by `3-large`, see step 4): `text-embedding-3-small` is the default.** Expected users ask mostly in French,
   where 3-small reaches 100% hit@6 (above 3-large's 97.4%) at about a seventh of the cost.
   The accepted trade-off is Arabic (62.5%); Phase 2 query rewriting (Arabic/English →
   French legal terms) targets that gap.
@@ -194,3 +194,59 @@ normalises references ("n°5/W/2017", "5W2017", "5/W/17" → one token). Hybrid 
   de la circulaire 4/W/2018 ?") should be added before hybrid is judged for good.
 - **Decision:** dense stays the default (`REGLENS_RETRIEVAL_MODE=dense`). BM25 vectors stay
   in the index at no cost: hybrid is one setting away, and BM25 can feed reranker candidates.
+
+## Phase 2, step 4: cross-encoder reranking
+
+`jinaai/jina-reranker-v2-base-multilingual` (local ONNX via FastEmbed, 1.1 GB) re-scores the
+first-stage candidates (question and chunk read together) and keeps the top 6. Same index
+(article chunks, `text-embedding-3-small`, dense). The top 20 dense results contain the
+right passage for 93.8% of questions (top 30: 95.8%), the ceiling for reranking; hybrid
+candidates add no recall (also 93.8% at 20).
+
+| Configuration | Hit@1 | Hit@3 | Hit@6 | MRR@6 | Doc hit@6 | Section hit@6 | FR hit@6 | EN hit@6 | AR hit@6 | Hard hit@6 | p50 latency |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Dense (before) | 64.6% | 84.4% | 87.5% | 0.737 | 90.6% | 77.1% | **100%** | 89.7% | 55.0% | **85.0%** | **0.3 s** |
+| + rerank top 10 | 67.7% | 82.3% | 85.4% | 0.752 | 89.6% | 76.0% | 95.7% | 89.7% | 55.0% | 80.0% | 2.6 s |
+| **+ rerank top 20** | **71.9%** | **88.5%** | **90.6%** | **0.804** | **95.8%** | **81.2%** | 97.9% | 89.7% | **75.0%** | 75.0% | 5.4 s |
+
+- Reranking the top 20 gives the best results of Phase 2: MRR 0.737 → 0.804, hit@1 +7.3
+  points, and the largest Arabic gain so far (hit@6 55% → 75%, MRR 0.406 → 0.650).
+- **Flagged:** French hit@6 100% → 97.9% (1 question) and hard questions 85% → 75%
+  (2 questions).
+- Reranking only the top 10 is worse than no reranking: Arabic answers sit deep in the dense
+  ranking, so the reranker needs the full 20 candidates.
+- **Cost: latency.** On a laptop CPU, scoring 20 pairs of up to 1,200 characters takes about
+  5 s per question (p50 5.4 s, p95 7.8 s), against 0.3 s for dense search alone.
+
+### Making Arabic retrieval fast (step 4, continued)
+
+Users ask mostly in French and English, and 5 s per question is too slow. The reranker's
+gain is mostly Arabic, so three faster options were measured:
+
+1. **Rerank Arabic questions only** (`REGLENS_RERANK_LANGUAGES=ar`, language detection
+   from the guardrails; the model loads lazily, so French/English never pay for it):
+   hit@6 91.7%, MRR 0.788, French/English unchanged at 0.3 s.
+2. **Shorter reranker input** on Arabic questions, timed on this Intel laptop without
+   other load (20 candidates): full text 7.1 s, first 600 characters 3.7 s, first 400
+   characters 3.0 s (hit@6 unchanged at 75%), max 256 tokens 4.5 s. 3 s is the floor here.
+3. **`text-embedding-3-large` on the article chunks, no reranker.** Earlier `3-large` had
+   lifted Arabic from 62.5% to 93.8% on fixed chunks, so it was re-measured on the current
+   chunking (indexing ~419k tokens, ~$0.05):
+
+| Article chunks, 96 questions | Hit@1 | Hit@6 | MRR@6 | Doc hit@6 | Section hit@6 | FR hit@6 | EN hit@6 | AR hit@6 | p50 latency |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `3-small` | 64.6% | 87.5% | 0.737 | 90.6% | 77.1% | 100% | 89.7% | 55.0% | 0.3 s |
+| `3-small` + reranker on Arabic only | n/a | 91.7% | 0.788 | n/a | n/a | 100% | 89.7% | 75.0% | 0.3 s (AR 3-7 s) |
+| Route Arabic → `3-large`, FR/EN → `3-small` | n/a | 93.8% | 0.801 | n/a | n/a | 100% | 89.7% | 85.0% | 0.3 s |
+| **`3-large` for everyone** | **74.0%** | **95.8%** | **0.828** | **99.0%** | **85.4%** | **100%** | **96.6%** | **85.0%** | 0.5 s |
+
+(Rows 2-3 are computed exactly from per-question results of the measured runs.)
+
+- **Decision: `text-embedding-3-large` for every question, no reranker.** It beats the
+  reranker on Arabic (85% vs 75%) at a tenth of the latency, adds 7 points on English,
+  keeps French at 100%, and needs one index instead of two. This **supersedes** the
+  earlier choice of `3-small`: on article chunks the gap is much larger than on fixed
+  chunks, and the extra cost is ~$0.05 per re-index (questions stay well under a cent
+  per thousand).
+- The reranker stays available (`REGLENS_RERANKER`, `REGLENS_RERANK_LANGUAGES`,
+  `REGLENS_RERANK_MAX_CHARS`, lazy loading) but off.

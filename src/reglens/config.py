@@ -41,6 +41,18 @@ class Settings(BaseSettings):
     top_k: int = 6
     # "dense" (embeddings), "hybrid" (embeddings + BM25 fused with RRF) or "sparse" (BM25).
     retrieval_mode: Literal["dense", "hybrid", "sparse"] = "dense"
+    # Cross-encoder reranking of the first-stage candidates; "" disables it.
+    # e.g. "jinaai/jina-reranker-v2-base-multilingual" (local, ONNX).
+    reranker: str = ""
+    rerank_candidates: int = 20
+    # Rerank only questions in these languages (comma-separated, e.g. "ar"); "" = all.
+    rerank_languages: str = ""
+    # Characters of each candidate the reranker reads (0 = all); shorter is faster.
+    rerank_max_chars: int = 0
+
+    @property
+    def rerank_language_set(self) -> frozenset[str]:
+        return frozenset(x.strip() for x in self.rerank_languages.split(",") if x.strip())
 
     # LLM via LiteLLM, e.g. "gpt-4o-mini" or "mistral/mistral-small-latest". Empty: no LLM,
     # `ask` returns the retrieved sources only.

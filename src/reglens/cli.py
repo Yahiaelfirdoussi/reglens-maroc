@@ -152,6 +152,7 @@ def golden_check(
 
 def _retriever() -> "Retriever":
     from reglens.retrieval.embeddings import make_embedder
+    from reglens.retrieval.reranker import make_reranker
     from reglens.retrieval.retriever import Retriever
     from reglens.retrieval.vector_store import QdrantStore, make_client
 
@@ -168,6 +169,9 @@ def _retriever() -> "Retriever":
         ),
         store,
         settings.retrieval_mode,
+        make_reranker(settings.reranker, settings.model_cache_dir, settings.rerank_max_chars),
+        settings.rerank_candidates,
+        settings.rerank_language_set,
     )
 
 
@@ -181,6 +185,10 @@ def _config_snapshot() -> dict[str, object]:
         "chunk_overlap": settings.chunk_overlap,
         "top_k": settings.top_k,
         "retrieval_mode": settings.retrieval_mode,
+        "reranker": settings.reranker or "none",
+        "rerank_candidates": settings.rerank_candidates,
+        "rerank_languages": settings.rerank_languages or "all",
+        "rerank_max_chars": settings.rerank_max_chars,
     }
 
 
