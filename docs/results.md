@@ -168,3 +168,29 @@ official wording). Same setup as step 1: article chunks ≤1,200 / 200, `text-em
 - The full header helped a few Arabic questions (q066, q086) but lost more elsewhere.
 - Takeaway: metadata belongs in exact-match channels (BM25 over references, filters)
   rather than in the dense vector; this informs the hybrid-search step.
+
+## Phase 2, step 3: hybrid search (BM25 + dense, RRF) — not adopted
+
+Every chunk now also carries a BM25 sparse vector (Qdrant IDF modifier). The BM25 text is
+the chunk plus its reference and article label: metadata goes to the exact-match channel,
+not the dense vector. The tokenizer folds accents, drops French/English stop words and
+normalises references ("n°5/W/2017", "5W2017", "5/W/17" → one token). Hybrid fuses the top
+30 of each side with Reciprocal Rank Fusion. All three modes run on the same index
+(article chunks ≤1,200 / 200, `text-embedding-3-small`), so only the search mode changes.
+
+| Search mode | Hit@1 | Hit@3 | Hit@6 | MRR@6 | FR MRR | EN MRR | AR MRR | p50 latency |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **Dense (kept)** | **64.6%** | **84.4%** | 87.5% | **0.737** | **0.872** | **0.747** | **0.406** | 285 ms |
+| BM25 only | 33.3% | 49.0% | 57.3% | 0.415 | 0.716 | 0.195 | 0.027 | 64 ms |
+| Hybrid (RRF) | 57.3% | 79.2% | 87.5% | 0.687 | 0.837 | 0.652 | 0.385 | 368 ms |
+
+- Hybrid finds the same answers (hit@6 87.5%) but ranks them lower (MRR 0.737 → 0.687).
+  BM25 cannot match across languages (EN MRR 0.195, AR 0.027 against French texts), and
+  equal-weight fusion lets that noise push good dense results down. Even in French, BM25
+  alone (0.716) is below dense (0.872).
+- The dense run reproduces step 1 (MRR 0.737 vs 0.732; re-embedding noise).
+- **Test-set gap:** only 2 of 96 questions name a reference (q015, q047), BM25's main
+  strength, and dense already finds both. Reference-style questions ("Que dit l'article 6
+  de la circulaire 4/W/2018 ?") should be added before hybrid is judged for good.
+- **Decision:** dense stays the default (`REGLENS_RETRIEVAL_MODE=dense`). BM25 vectors stay
+  in the index at no cost: hybrid is one setting away, and BM25 can feed reranker candidates.

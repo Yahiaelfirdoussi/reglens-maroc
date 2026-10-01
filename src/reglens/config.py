@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     contextual_header: Literal["off", "full", "ref"] = "off"
 
     top_k: int = 6
+    # "dense" (embeddings), "hybrid" (embeddings + BM25 fused with RRF) or "sparse" (BM25).
+    retrieval_mode: Literal["dense", "hybrid", "sparse"] = "dense"
 
     # LLM via LiteLLM, e.g. "gpt-4o-mini" or "mistral/mistral-small-latest". Empty: no LLM,
     # `ask` returns the retrieved sources only.

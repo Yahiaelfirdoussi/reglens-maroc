@@ -167,6 +167,7 @@ def _retriever() -> "Retriever":
             settings.embedding_model, settings.model_cache_dir, settings.embedder_api_key()
         ),
         store,
+        settings.retrieval_mode,
     )
 
 
@@ -179,6 +180,7 @@ def _config_snapshot() -> dict[str, object]:
         "chunk_size": settings.chunk_size,
         "chunk_overlap": settings.chunk_overlap,
         "top_k": settings.top_k,
+        "retrieval_mode": settings.retrieval_mode,
     }
 
 

@@ -14,6 +14,7 @@ from reglens.ingestion.metadata import read_sidecar
 from reglens.ingestion.ocr import page_texts
 from reglens.models import Chunk, DocumentMetadata
 from reglens.retrieval.embeddings import Embedder
+from reglens.retrieval.sparse import BM25Encoder
 from reglens.retrieval.vector_store import QdrantStore
 
 log = structlog.get_logger(__name__)
@@ -48,6 +49,16 @@ def contextual_header(
     title = metadata.title if style == "full" else None
     parts = [metadata.issuer, metadata.reference, title, section]
     return " | ".join(part for part in parts if part)
+
+
+def sparse_text(chunk: Chunk) -> str:
+    """Text indexed by BM25: the chunk plus its reference and article label.
+
+    Metadata goes to the exact-match channel only; prepending it to the dense text lowered
+    retrieval quality (see docs/results.md, contextual header).
+    """
+    parts = [chunk.reference or "", chunk.section or "", chunk.text]
+    return " ".join(part for part in parts if part)
 
 
 def document_chunks(
@@ -124,9 +135,13 @@ def ingest(
     for start in range(0, len(chunks), batch_size):
         batch = chunks[start : start + batch_size]
         vectors.extend(embedder.embed_documents([c.embedding_text for c in batch]))
+    keyword_texts = [sparse_text(c) for c in chunks]
+    encoder = BM25Encoder.fit(keyword_texts)
+    sparse = [encoder.encode_document(text) for text in keyword_texts]
     store.recreate(embedder.dim)
     for start in range(0, len(chunks), batch_size):
-        store.upsert(chunks[start : start + batch_size], vectors[start : start + batch_size])
+        end = start + batch_size
+        store.upsert(chunks[start:end], vectors[start:end], sparse[start:end])
     documents = len({c.file for c in chunks})
     log.info("ingest_done", documents=documents, chunks=len(chunks), embedder=embedder.name)
     return IngestStats(documents, len(chunks), truncated)
