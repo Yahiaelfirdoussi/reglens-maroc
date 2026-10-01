@@ -174,7 +174,7 @@ def _config_snapshot() -> dict[str, object]:
     settings = get_settings()
     return {
         "embedding_model": settings.embedding_model,
-        "chunking": "fixed",
+        "chunking": settings.chunking,
         "chunk_size": settings.chunk_size,
         "chunk_overlap": settings.chunk_overlap,
         "top_k": settings.top_k,
@@ -201,7 +201,14 @@ def ingest(
     embedder = make_embedder(
         settings.embedding_model, settings.model_cache_dir, settings.embedder_api_key()
     )
-    stats = run_ingest(path, embedder, store, settings.chunk_size, settings.chunk_overlap)
+    stats = run_ingest(
+        path,
+        embedder,
+        store,
+        settings.chunk_size,
+        settings.chunk_overlap,
+        strategy=settings.chunking,
+    )
     typer.echo(
         f"Indexed {stats.chunks} chunks from {stats.documents} documents with {embedder.name} "
         f"into collection {settings.collection_name}."
@@ -247,7 +254,8 @@ def ask(
     for n, scored in enumerate(answer.sources, start=1):
         c = scored.chunk
         pages = f"p.{c.page_start}" + (f"-{c.page_end}" if c.page_end != c.page_start else "")
-        typer.echo(f"[{n}] {c.issuer} {c.reference or '-'} {pages} (score {scored.score:.3f})")
+        where = f"{c.section}, {pages}" if c.section else pages
+        typer.echo(f"[{n}] {c.issuer} {c.reference or '-'} {where} (score {scored.score:.3f})")
         typer.echo(f"    {c.text[:220]}...")
 
 

@@ -4,10 +4,11 @@ import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 import structlog
 
-from reglens.ingestion.chunking import fixed_size_chunks
+from reglens.ingestion.chunking import TextSpan, fixed_size_chunks, legal_chunks
 from reglens.ingestion.cleaning import clean_page
 from reglens.ingestion.metadata import read_sidecar
 from reglens.ingestion.ocr import page_texts
@@ -23,7 +24,18 @@ def chunk_id(file: str, index: int) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_URL, f"reglens:{file}#{index}"))
 
 
-def document_chunks(pdf: Path, raw_dir: Path, size: int, overlap: int) -> list[Chunk]:
+Chunking = Literal["fixed", "legal"]
+
+
+def split(pages: list[str], strategy: Chunking, size: int, overlap: int) -> list[TextSpan]:
+    if strategy == "legal":
+        return legal_chunks(pages, size, overlap)
+    return fixed_size_chunks(pages, size, overlap)
+
+
+def document_chunks(
+    pdf: Path, raw_dir: Path, size: int, overlap: int, strategy: Chunking = "fixed"
+) -> list[Chunk]:
     metadata = read_sidecar(pdf)
     file = pdf.relative_to(raw_dir).as_posix()
     pages = [clean_page(text) for text in page_texts(pdf)]
@@ -41,14 +53,17 @@ def document_chunks(pdf: Path, raw_dir: Path, size: int, overlap: int) -> list[C
             url=metadata.url,
             language=metadata.language,
             published=metadata.published,
+            section=span.section,
         )
-        for index, span in enumerate(fixed_size_chunks(pages, size, overlap))
+        for index, span in enumerate(split(pages, strategy, size, overlap))
     ]
 
 
-def iter_chunks(raw_dir: Path, size: int, overlap: int) -> Iterator[Chunk]:
+def iter_chunks(
+    raw_dir: Path, size: int, overlap: int, strategy: Chunking = "fixed"
+) -> Iterator[Chunk]:
     for pdf in sorted(raw_dir.rglob("*.pdf")):
-        yield from document_chunks(pdf, raw_dir, size, overlap)
+        yield from document_chunks(pdf, raw_dir, size, overlap, strategy)
 
 
 @dataclass(frozen=True)
@@ -65,13 +80,14 @@ def ingest(
     size: int,
     overlap: int,
     batch_size: int = 64,
+    strategy: Chunking = "fixed",
 ) -> IngestStats:
     """Rebuild the collection from every document under ``raw_dir``.
 
     Everything is embedded before the old collection is dropped, so a failure while
     embedding (network, quota) leaves the existing index untouched.
     """
-    chunks = list(iter_chunks(raw_dir, size, overlap))
+    chunks = list(iter_chunks(raw_dir, size, overlap, strategy))
     is_truncated = getattr(embedder, "is_truncated", None)
     truncated = sum(is_truncated(c.text) for c in chunks) if is_truncated else 0
     if truncated:

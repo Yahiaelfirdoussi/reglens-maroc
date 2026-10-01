@@ -49,3 +49,24 @@ def percentile(values: Sequence[float], q: float) -> float:
     ordered = sorted(values)
     index = min(len(ordered) - 1, max(0, round(q / 100 * (len(ordered) - 1))))
     return ordered[index]
+
+
+_ARTICLE_ID = re.compile(r"(premier|1er|\d+(?:\.\d+)*)", re.IGNORECASE)
+
+
+def article_ids(section: str | None) -> set[str]:
+    """Article identifiers in a label: "Articles 3-4" -> {"3", "4"}, "Article premier" -> {"1"}."""
+    if not section:
+        return set()
+    ids = {"1" if m.lower() in ("premier", "1er") else m for m in _ARTICLE_ID.findall(section)}
+    ranges = re.findall(r"(\d+)\s*-\s*(\d+)", section)
+    for low, high in ranges:
+        if int(high) - int(low) <= 20:
+            ids |= {str(n) for n in range(int(low), int(high) + 1)}
+    return ids
+
+
+def is_section_hit(chunk: Chunk, file: str, expected_section: str | None) -> bool:
+    """Right document and the chunk's article label covers the expected article."""
+    expected = article_ids(expected_section)
+    return chunk.file == file and bool(expected) and bool(expected & article_ids(chunk.section))

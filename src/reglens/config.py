@@ -29,7 +29,9 @@ class Settings(BaseSettings):
     embedding_api_key: SecretStr | None = None
     model_cache_dir: Path = Path.home() / ".cache" / "reglens" / "models"
 
-    # Fixed-size chunking (baseline). Sized to the embedding model's 128-token window.
+    # Chunking: "fixed" windows (baseline) or "legal" (one chunk per article).
+    # 450/90 was sized for the local model's 128-token window; API models read far more.
+    chunking: Literal["fixed", "legal"] = "fixed"
     chunk_size: int = 450
     chunk_overlap: int = 90
 
@@ -46,7 +48,10 @@ class Settings(BaseSettings):
         """One collection per embedding model, so indexes for different models coexist."""
         from reglens.retrieval.embeddings import collection_suffix
 
-        return f"{self.qdrant_collection}__{collection_suffix(self.embedding_model)}"
+        name = f"{self.qdrant_collection}__{collection_suffix(self.embedding_model)}"
+        if (self.chunking, self.chunk_size, self.chunk_overlap) != ("fixed", 450, 90):
+            name += f"__{self.chunking}{self.chunk_size}-{self.chunk_overlap}"
+        return name
 
     def embedder_api_key(self) -> str | None:
         return self.embedding_api_key.get_secret_value() if self.embedding_api_key else None

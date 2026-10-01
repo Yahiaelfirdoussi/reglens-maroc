@@ -116,3 +116,33 @@ Reference phrases were written before the evaluation and not tuned on it.
 
 Off-topic misses (weather, a capital city, tourism, flu in Arabic) pass to retrieval, where
 the Phase 3 abstention threshold and the system prompt's scope rule are the next layers.
+
+## Phase 2, step 1: structure-aware chunking
+
+One chunk per article (Titre/Chapitre/Article headings, BO "ARTICLE PREMIER" / "ART. 2",
+AMMC "Article 1.20", Arabic "المادة"); long articles split on sentence boundaries with
+200-character overlap; short neighbouring articles merged until 300 characters; a sentence
+ending with ":" stays with the list or table it introduces (tables may grow to 2,400
+characters); documents without articles fall back to sentence windows. Lower-case
+"l'article 5 ci-dessus" references do not split; isolated OCR misreads of article numbers
+are repaired from their neighbours (11, 42, 13 → 11, 12, 13). 44 of 47 documents have
+gap-free article sequences (the rest: two amending circulars that quote only the articles
+they change, and one missing heading).
+
+Bigger chunks pass the passage metric more easily, so a fixed 1,200-character run isolates
+the size effect from the structure effect. All runs: `text-embedding-3-small`, 96 questions.
+**Section hit** = a top-6 chunk labelled with the expected article (only article chunks
+carry labels).
+
+| Configuration | Chunks | Hit@1 | Hit@3 | Hit@6 | MRR@6 | Hard hit@6 | FR hit@6 | AR hit@6 | Section hit@6 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Fixed 450 / 90 (before) | 4,118 | 54.2% | 80.2% | 87.5% | 0.680 | 80.0% | 97.9% | 60.0% | n/a |
+| Fixed 1,200 / 200 (size only) | 1,492 | 67.7% | 79.2% | 86.5% | 0.747 | 75.0% | 95.7% | 50.0% | n/a |
+| **By article ≤1,200 / 200** | 2,059 | 63.5% | **84.4%** | 87.5% | 0.732 | **85.0%** | **100%** | 55.0% | **77.1%** |
+
+- Most of the MRR gain comes from chunk size (0.680 → 0.747), not structure. Structure adds a
+  better top 3, better hard questions and perfect French retrieval, and it is the only
+  option whose chunks can be cited by article (77.1% section hit; 89.4% on French).
+- One question is worth ~1 point; differences of 1-2 points are within noise.
+- Arabic stays weak whatever the chunking: the target of the query-rewriting step.
+- **Decision:** article chunking (≤1,200 / 200) becomes the default.

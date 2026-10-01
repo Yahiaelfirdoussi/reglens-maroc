@@ -51,7 +51,8 @@ def clean_page(text: str) -> str:
     text = re.sub(r"\s+", " ", text)  # re-joins words that OCR put on separate lines
     for pattern in _BOILERPLATE:
         text = pattern.sub(" ", text)
-    text = re.sub(r"\bArticie\b", "Article", text)
+    # OCR misspellings of the heading word seen in this corpus ("Articie 21", "Articte 10").
+    text = re.sub(r"\b(?:Articie|Articte|Artide|Artlcle|Aricle|Arficle)(?=\s*\d)", "Article", text)
     text = re.sub(r"\b(Article|ARTICLE)(\d)", r"\1 \2", text)
     text = re.sub(r"(\w)- (?=[a-zà-ÿ])", r"\1-", text)  # "ci- dessus" -> "ci-dessus"
     return re.sub(r"\s+", " ", text).strip()

@@ -19,6 +19,7 @@ class ItemResult:
     difficulty: str
     passage_rank: int | None
     document_rank: int | None
+    section_rank: int | None
     retrieval_ms: float
     top_files: list[str]
 
@@ -35,6 +36,7 @@ class Report:
         rows = self.items if subset is None else subset
         passage = [r.passage_rank for r in rows]
         document = [r.document_rank for r in rows]
+        section = [r.section_rank for r in rows]
         latency = [r.retrieval_ms for r in rows]
         return {
             "n": len(rows),
@@ -43,6 +45,7 @@ class Report:
             f"hit@{self.k}": m.hit_rate(passage, self.k),
             f"mrr@{self.k}": m.mrr(passage, self.k),
             f"doc_hit@{self.k}": m.hit_rate(document, self.k),
+            f"section_hit@{self.k}": m.hit_rate(section, self.k),
             "latency_p50_ms": m.percentile(latency, 50),
             "latency_p95_ms": m.percentile(latency, 95),
         }
@@ -70,6 +73,10 @@ def evaluate_retrieval(
             any(m.is_passage_hit(r.chunk, e.file, e.quote) for e in passages) for r in results
         ]
         document = [any(r.chunk.file == e.file for e in passages) for r in results]
+        section = [
+            any(m.is_section_hit(r.chunk, e.file, item.expected_section) for e in passages)
+            for r in results
+        ]
         report.items.append(
             ItemResult(
                 id=item.id,
@@ -78,6 +85,7 @@ def evaluate_retrieval(
                 difficulty=item.difficulty,
                 passage_rank=m.first_hit_rank(passage),
                 document_rank=m.first_hit_rank(document),
+                section_rank=m.first_hit_rank(section),
                 retrieval_ms=elapsed,
                 top_files=[r.chunk.file for r in results],
             )
@@ -101,16 +109,18 @@ def render_markdown(report: Report) -> str:
         "",
         "A **passage hit** is a retrieved chunk from the expected document that contains at "
         f"least {m.PASSAGE_COVERAGE:.0%} of the evidence quote's words; a **document hit** only "
-        "needs the right document.",
+        "needs the right document; a **section hit** needs a chunk from that document labelled "
+        "with the expected article (only chunkers that label articles can score it).",
         "",
-        f"| Slice | n | Hit@1 | Hit@3 | Hit@{k} | MRR@{k} | Doc hit@{k} |",
-        "|---|---:|---:|---:|---:|---:|---:|",
+        f"| Slice | n | Hit@1 | Hit@3 | Hit@{k} | MRR@{k} | Doc hit@{k} | Section hit@{k} |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
 
     def row(name: str, v: dict[str, float]) -> str:
         return (
             f"| {name} | {v['n']:.0f} | {_pct(v['hit@1'])} | {_pct(v['hit@3'])} | "
-            f"{_pct(v[f'hit@{k}'])} | {v[f'mrr@{k}']:.3f} | {_pct(v[f'doc_hit@{k}'])} |"
+            f"{_pct(v[f'hit@{k}'])} | {v[f'mrr@{k}']:.3f} | {_pct(v[f'doc_hit@{k}'])} | "
+            f"{_pct(v[f'section_hit@{k}'])} |"
         )
 
     lines.append(row("**All**", s))
