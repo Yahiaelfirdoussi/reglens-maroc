@@ -250,3 +250,49 @@ gain is mostly Arabic, so three faster options were measured:
   per thousand).
 - The reranker stays available (`REGLENS_RERANKER`, `REGLENS_RERANK_LANGUAGES`,
   `REGLENS_RERANK_MAX_CHARS`, lazy loading) but off.
+
+## Phase 3: answers, citations and abstention
+
+Setup: article chunks, `text-embedding-3-large`, top 6 sources, `gpt-5.4-mini-2026-03-17`
+via LiteLLM (temperature 0). All 113 golden questions; `reglens eval-answers`.
+
+Abstention works in two layers. A score floor (0.35) answers "not found" without calling the
+LLM; it is deliberately low because top retrieval scores of answerable and unanswerable
+questions overlap (answerable 0.41-0.81, unanswerable 0.23-0.63; the lowest answerable
+scores are all Arabic, cross-lingual), so a single threshold cannot separate them. The LLM
+then decides: it must reply exactly `NOT_FOUND` when the sources do not contain the answer,
+and that signal becomes a fixed answer in the question's language.
+
+| Slice | n | Numeric fact recall | Cites right document | Cites right article | Citation coverage | False abstention | Abstention accuracy | p50 latency |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **All** | 113 | **83.2%** | **97.8%** | **87.9%** | **98.9%** | 5.2% | **94.1%** | 1.6 s |
+| French | 54 | 88.5% | 97.9% | 85.1% | 98.9% | 0.0% | 85.7% | 1.6 s |
+| English | 34 | 76.9% | 100% | 92.6% | 98.1% | 6.9% | 100% | 1.5 s |
+| Arabic | 25 | 76.5% | 94.1% | 88.2% | 100% | 15.0% | 100% | 1.7 s |
+| Hard questions | 23 | 50.0% | 100% | 72.2% | 100% | 10.0% | 100% | 1.7 s |
+
+Metric notes (each found by reading the answers, then fixed in the scorer):
+
+- **Numeric fact recall** checks that every number of an expected fact appears in the answer
+  ("30 jours ouvrables" is found in "30 business days"; "trente" = 30; "5,5 %" = "5.5%" =
+  "٥٫٥٪"; "200.000" = "200 000"). Text facts are French wording, so literal matching
+  under-counts correct English and Arabic answers (literal recall 57.5%); judging them needs
+  the LLM-as-judge of Phase 4.
+- Citation coverage counts a citation written after the final punctuation ("…100%.[1]").
+
+Behaviour fixes made during the phase:
+
+- English questions were answered in French (the sources' language): the question's
+  language is now stated explicitly to the model.
+- `NOT_FOUND` written after an explanation was missed: the signal is now detected anywhere.
+- The prompt forbids answering a different question with related sources.
+
+Abstention, question by question:
+
+- **Unanswerable: 16/17 refused (94.1%).** The miss, u007 (deposit-guarantee cap, the
+  deliberate near-miss), states that no capped amount is given and cites a source instead of
+  replying `NOT_FOUND`. It invents no figure.
+- **Answerable refused: 5/96 (5.2%).** 4 of them (q010, q051, q077, q086) are retrieval
+  misses: the right passage was not in the sources, so "not found" is the faithful answer.
+  Only q042 is a true model error (right passage ranked 2nd).
+- Average 1,618 tokens per answer (about 1,500 in, 120 out).

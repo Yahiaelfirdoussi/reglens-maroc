@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     llm_model: str = ""
     llm_api_key: SecretStr | None = None
     llm_timeout_s: float = 60.0
+    # Abstention floor: below this top retrieval score, answer "not found" without the LLM.
+    # Calibrated for text-embedding-3-large (lowest answerable top score on the golden set:
+    # 0.407, cross-lingual Arabic), so it only catches clearly unrelated questions.
+    abstain_min_score: float = 0.35
 
     @property
     def collection_name(self) -> str:

@@ -254,9 +254,11 @@ def ask(
 
     retriever = _retriever()
     scope = ScopeClassifier(retriever.embedder)
-    answer = RagPipeline(retriever, llm, k or settings.top_k, scope).answer(question)
+    answer = RagPipeline(
+        retriever, llm, k or settings.top_k, scope, settings.abstain_min_score
+    ).answer(question)
 
-    if answer.guardrail != "ok":
+    if answer.guardrail != "ok" or answer.abstention != "none":
         typer.echo(answer.text or "")
         return
     if answer.text is None:
@@ -299,6 +301,47 @@ def evaluate(
         f"doc hit@{depth} {s[f'doc_hit@{depth}']:.1%} | n={s['n']:.0f}"
     )
     typer.echo(f"Report: {md_path} and {json_path}")
+
+
+@app.command("eval-answers")
+def eval_answers(
+    golden_set: Annotated[Path, typer.Argument(help="Golden set JSONL.")] = Path(
+        "eval/golden_set.jsonl"
+    ),
+    label: Annotated[str, typer.Option(help="Name of this configuration.")] = "answers",
+    out: Annotated[Path, typer.Option(help="Report directory.")] = Path("eval/report"),
+    limit: Annotated[int | None, typer.Option(help="Only the first N questions.")] = None,
+) -> None:
+    """Generate answers for the golden set: fact recall, citations, abstention, latency."""
+    from reglens.evaluation.answers import evaluate_answers, summarize, write_answer_report
+    from reglens.evaluation.golden import load_golden
+    from reglens.generation.llm import LiteLLMClient
+    from reglens.rag import RagPipeline
+
+    settings = get_settings()
+    if not settings.llm_model:
+        typer.echo("Set REGLENS_LLM_MODEL (and REGLENS_LLM_API_KEY) to evaluate answers.", err=True)
+        raise typer.Exit(code=1)
+    key = settings.llm_api_key.get_secret_value() if settings.llm_api_key else None
+    llm = LiteLLMClient(settings.llm_model, key, settings.llm_timeout_s)
+    retriever = _retriever()
+    pipeline = RagPipeline(retriever, llm, settings.top_k, min_score=settings.abstain_min_score)
+    items = load_golden(golden_set)[:limit]
+    rows = evaluate_answers(items, pipeline)
+    config = {
+        **_config_snapshot(),
+        "llm": settings.llm_model,
+        "abstain_min_score": settings.abstain_min_score,
+    }
+    path = write_answer_report(rows, out / label, label, config)
+    s = summarize(rows)
+    typer.echo(
+        f"{label}: numeric fact recall {s['numeric_fact_recall']:.1%} | "
+        f"literal fact recall {s['fact_recall']:.1%} | "
+        f"cites doc {s['cites_document']:.1%} | false abstention {s['false_abstention']:.1%} | "
+        f"abstention acc. {s['abstention_accuracy']:.1%} | p50 {s['latency_p50_ms'] / 1000:.1f} s"
+    )
+    typer.echo(f"Report: {path}")
 
 
 @app.command("eval-guardrails")

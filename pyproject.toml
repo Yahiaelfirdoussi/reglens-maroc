@@ -52,6 +52,8 @@ allowed-confusables = ["’", "‘", "–", "—", "«", "»"]
 [tool.ruff.lint.per-file-ignores]
 # Multilingual regex patterns: long by nature, and Arabic letters are intentional.
 "src/reglens/guardrails.py" = ["E501", "RUF001"]
+"src/reglens/evaluation/answers.py" = ["RUF001", "RUF002"]  # Arabic-Indic digits on purpose
+"tests/test_answers.py" = ["RUF001"]
 
 [tool.mypy]
 python_version = "3.11"

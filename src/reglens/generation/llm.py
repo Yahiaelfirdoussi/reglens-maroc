@@ -22,6 +22,7 @@ class LiteLLMClient:
         self._model = model
         self._api_key = api_key
         self._timeout_s = timeout_s
+        self.last_usage: dict[str, int] = {}
 
     @property
     def name(self) -> str:
@@ -36,7 +37,14 @@ class LiteLLMClient:
             api_key=self._api_key,
             timeout=self._timeout_s,
             temperature=0,
+            num_retries=2,
+            drop_params=True,  # some models reject temperature; drop it instead of failing
         )
+        usage = getattr(response, "usage", None)
+        self.last_usage = {
+            "prompt_tokens": int(getattr(usage, "prompt_tokens", 0) or 0),
+            "completion_tokens": int(getattr(usage, "completion_tokens", 0) or 0),
+        }
         return str(response.choices[0].message.content or "")
 
 
