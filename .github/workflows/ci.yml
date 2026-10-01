@@ -24,4 +24,6 @@ jobs:
           .venv/bin/ruff format --check .
           .venv/bin/mypy src
       - name: Test
-        run: .venv/bin/pytest -q
+        run: .venv/bin/pytest -q --ignore=tests/test_eval_gate.py
+      - name: Evaluation gate (FICTIONAL fixture corpus, hit@6 >= 85%)
+        run: .venv/bin/pytest -q tests/test_eval_gate.py

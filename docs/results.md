@@ -296,3 +296,45 @@ Abstention, question by question:
   misses: the right passage was not in the sources, so "not found" is the faithful answer.
   Only q042 is a true model error (right passage ranked 2nd).
 - Average 1,618 tokens per answer (about 1,500 in, 120 out).
+
+## Phase 4: evaluation as a system
+
+One command, `reglens eval eval/golden_set.jsonl --answers --judge`, writes
+`eval/report/report.md` and `report.json` with retrieval, answer, citation, abstention,
+judge, latency and token metrics. The LLM-as-judge is a stronger model than the answering
+one (`gpt-5.4-2026-03-05` judging `gpt-5.4-mini-2026-03-17`), since a model grading its own
+answers is lenient. It sees the question, answer, numbered sources and the reference
+(expected facts and official passage) and returns JSON.
+
+| Slice | n | Faithfulness | Fully faithful | Correctness (judge) | Relevance (1-5) | Numeric facts | Cites doc | Cites article | False abst. | Abst. acc. | p50 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| **All** | 113 | **96.3%** | 94.6% | **94.6%** | **4.89** | 85.3% | 98.9% | 88.0% | 4.2% | 88.2% | 1.7 s |
+| French | 54 | 95.6% | n/a | 95.7% | 4.91 | 90.4% | 100% | 87.2% | 0.0% | 85.7% | 1.8 s |
+| English | 34 | 100% | n/a | 100% | 5.00 | 76.9% | 100% | 92.6% | 6.9% | 100% | 1.5 s |
+| Arabic | 25 | 92.6% | n/a | 83.3% | 4.67 | 82.4% | 94.4% | 83.3% | 10.0% | 80.0% | 1.8 s |
+| Hard | 23 | 99.7% | n/a | 97.2% | 4.94 | 60.0% | 100% | 72.2% | 10.0% | 66.7% | 1.8 s |
+
+Retrieval in the same run: hit@6 95.8%, MRR@6 0.828. 92 answers judged (answerable and
+answered). Average 1,622 tokens per answer; cost per query is reported once prices are set
+(`REGLENS_LLM_PRICE_IN` / `REGLENS_LLM_PRICE_OUT`, USD per million tokens).
+
+How to read it:
+
+- **Judge correctness vs literal matching.** English answers reach 100% correctness with the
+  judge against 21.7% literal fact recall: the facts are there, translated. The judge
+  resolves the text-fact limitation noted in Phase 3.
+- **Run-to-run variation.** Abstention accuracy was 94.1% in Phase 3 and 88.2% here: one
+  question (u017) flipped. The model is not fully deterministic at temperature 0, and with
+  17 unanswerable questions one question is worth ~6 points. Differences below that are
+  noise; repeated runs would give an interval.
+- **The judge also errs.** It flagged q024 (risk weight 50 % for BBB+ to BBB- sovereigns)
+  as unsupported although the figure is in the source table; the flattened table row likely
+  confused it. Faithfulness is, if anything, slightly underestimated.
+- Remaining issues: hard questions (numeric facts 60%), Arabic correctness (83.3%), and
+  the deposit-guarantee near-miss (u007) still answered with a hedge instead of `NOT_FOUND`.
+
+**CI gate.** `tests/fixtures/` holds a FICTIONAL four-document corpus and 9 golden
+questions. CI turns it into PDFs, indexes it through `reglens ingest` (offline hash
+embedder, local Qdrant) and runs `reglens eval --min-hit-rate 0.85`, which exits with an
+error below the gate. Fixture hit@6 today: 100% (8/8), so one regression is tolerated and
+two fail the build.

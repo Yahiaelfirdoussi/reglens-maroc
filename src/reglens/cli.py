@@ -1,5 +1,6 @@
 """Command-line interface: ``reglens ingest | ask | eval | serve``."""
 
+from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
 
@@ -9,6 +10,8 @@ from reglens.config import get_settings
 from reglens.log import configure_logging
 
 if TYPE_CHECKING:
+    from reglens.evaluation.answers import AnswerResult
+    from reglens.evaluation.golden import GoldenItem
     from reglens.retrieval.retriever import Retriever
 
 app = typer.Typer(help="RegLens Maroc — grounded answers on Moroccan financial regulation.")
@@ -273,6 +276,36 @@ def ask(
         typer.echo(f"    {c.text[:220]}...")
 
 
+def _answer_rows(
+    items: list["GoldenItem"], retriever: "Retriever", judge: bool
+) -> tuple[list["AnswerResult"], dict[str, object]]:
+    """Generate (and optionally judge) answers for golden items."""
+    from reglens.evaluation.answers import evaluate_answers
+    from reglens.evaluation.judge import Judge
+    from reglens.generation.llm import LiteLLMClient
+    from reglens.rag import RagPipeline
+
+    settings = get_settings()
+    if not settings.llm_model:
+        typer.echo("Set REGLENS_LLM_MODEL (and REGLENS_LLM_API_KEY) to evaluate answers.", err=True)
+        raise typer.Exit(code=1)
+    key = settings.llm_api_key.get_secret_value() if settings.llm_api_key else None
+    llm = LiteLLMClient(settings.llm_model, key, settings.llm_timeout_s)
+    grader = None
+    if judge:
+        if not settings.judge_model:
+            typer.echo("Set REGLENS_JUDGE_MODEL to use the LLM-as-judge.", err=True)
+            raise typer.Exit(code=1)
+        grader = Judge(LiteLLMClient(settings.judge_model, key, settings.llm_timeout_s))
+    pipeline = RagPipeline(retriever, llm, settings.top_k, min_score=settings.abstain_min_score)
+    config: dict[str, object] = {
+        "llm": settings.llm_model,
+        "judge": settings.judge_model if judge else "none",
+        "abstain_min_score": settings.abstain_min_score,
+    }
+    return evaluate_answers(items, pipeline, grader), config
+
+
 @app.command("eval")
 def evaluate(
     golden_set: Annotated[Path, typer.Argument(help="Path to a golden set JSONL file.")] = Path(
@@ -281,26 +314,69 @@ def evaluate(
     k: Annotated[int | None, typer.Option("--k", "-k", help="Retrieval depth.")] = None,
     label: Annotated[str, typer.Option(help="Name of this configuration.")] = "baseline",
     out: Annotated[Path, typer.Option(help="Report directory.")] = Path("eval/report"),
-    judge: Annotated[bool, typer.Option(help="Use LLM-as-judge metrics (Phase 4).")] = False,
+    answers: Annotated[bool, typer.Option(help="Also generate and score answers.")] = False,
+    judge: Annotated[bool, typer.Option(help="Grade answers with the LLM-as-judge.")] = False,
+    min_hit_rate: Annotated[
+        float | None, typer.Option(help="Fail (exit 1) when hit@k is below this value.")
+    ] = None,
 ) -> None:
-    """Measure retrieval quality (hit rate, MRR) on the golden set."""
+    """Evaluate retrieval (and optionally answers) on a golden set; write report.md/json."""
+    import json
+
+    from reglens.evaluation.answers import render_markdown as render_answers
+    from reglens.evaluation.answers import summarize
     from reglens.evaluation.golden import load_golden
     from reglens.evaluation.runner import evaluate_retrieval, write_report
 
-    if judge:
-        typer.echo("LLM-as-judge metrics arrive in Phase 4; running retrieval metrics only.")
     settings = get_settings()
     depth = k or settings.top_k
-    report = evaluate_retrieval(
-        load_golden(golden_set), _retriever(), depth, label, _config_snapshot()
-    )
+    items = load_golden(golden_set)
+    retriever = _retriever()
+    report = evaluate_retrieval(items, retriever, depth, label, _config_snapshot())
     json_path, md_path = write_report(report, out)
     s = report.summary()
     typer.echo(
         f"{label}: hit@{depth} {s[f'hit@{depth}']:.1%} | MRR@{depth} {s[f'mrr@{depth}']:.3f} | "
         f"doc hit@{depth} {s[f'doc_hit@{depth}']:.1%} | n={s['n']:.0f}"
     )
+
+    if answers or judge:
+        rows, answer_config = _answer_rows(items, retriever, judge)
+        prices = (settings.llm_price_in, settings.llm_price_out)
+        summary = summarize(rows, *prices)
+        payload = json.loads(json_path.read_text(encoding="utf-8"))
+        payload["answers"] = {
+            "config": answer_config,
+            "summary": summary,
+            "rows": [asdict(r) for r in rows],
+        }
+        json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        md_path.write_text(
+            md_path.read_text(encoding="utf-8")
+            + "\n"
+            + render_answers(rows, label, {**_config_snapshot(), **answer_config}, *prices).replace(
+                "# Answer evaluation", "## Answers", 1
+            ),
+            encoding="utf-8",
+        )
+        typer.echo(
+            f"answers: numeric facts {summary['numeric_fact_recall']:.1%} | cites doc "
+            f"{summary['cites_document']:.1%} | abstention acc. "
+            f"{summary['abstention_accuracy']:.1%} | false abstention "
+            f"{summary['false_abstention']:.1%}"
+            + (
+                f" | faithfulness {summary['faithfulness']:.1%} | correctness "
+                f"{summary['correctness']:.1%}"
+                if summary["faithfulness"] is not None and summary["correctness"] is not None
+                else ""
+            )
+        )
     typer.echo(f"Report: {md_path} and {json_path}")
+
+    hit = s[f"hit@{depth}"]
+    if min_hit_rate is not None and hit < min_hit_rate:
+        typer.echo(f"FAIL: hit@{depth} {hit:.1%} is below the gate {min_hit_rate:.1%}.", err=True)
+        raise typer.Exit(code=1)
 
 
 @app.command("eval-answers")
@@ -311,35 +387,27 @@ def eval_answers(
     label: Annotated[str, typer.Option(help="Name of this configuration.")] = "answers",
     out: Annotated[Path, typer.Option(help="Report directory.")] = Path("eval/report"),
     limit: Annotated[int | None, typer.Option(help="Only the first N questions.")] = None,
+    judge: Annotated[bool, typer.Option(help="Grade answers with the LLM-as-judge.")] = False,
 ) -> None:
-    """Generate answers for the golden set: fact recall, citations, abstention, latency."""
-    from reglens.evaluation.answers import evaluate_answers, summarize, write_answer_report
+    """Generate answers only: facts, citations, abstention, judge, latency, cost."""
+    from reglens.evaluation.answers import summarize, write_answer_report
     from reglens.evaluation.golden import load_golden
-    from reglens.generation.llm import LiteLLMClient
-    from reglens.rag import RagPipeline
 
     settings = get_settings()
-    if not settings.llm_model:
-        typer.echo("Set REGLENS_LLM_MODEL (and REGLENS_LLM_API_KEY) to evaluate answers.", err=True)
-        raise typer.Exit(code=1)
-    key = settings.llm_api_key.get_secret_value() if settings.llm_api_key else None
-    llm = LiteLLMClient(settings.llm_model, key, settings.llm_timeout_s)
-    retriever = _retriever()
-    pipeline = RagPipeline(retriever, llm, settings.top_k, min_score=settings.abstain_min_score)
-    items = load_golden(golden_set)[:limit]
-    rows = evaluate_answers(items, pipeline)
-    config = {
-        **_config_snapshot(),
-        "llm": settings.llm_model,
-        "abstain_min_score": settings.abstain_min_score,
-    }
-    path = write_answer_report(rows, out / label, label, config)
-    s = summarize(rows)
+    rows, answer_config = _answer_rows(load_golden(golden_set)[:limit], _retriever(), judge)
+    prices = (settings.llm_price_in, settings.llm_price_out)
+    config = {**_config_snapshot(), **answer_config}
+    path = write_answer_report(rows, out / label, label, config, *prices)
+    s = summarize(rows, *prices)
     typer.echo(
-        f"{label}: numeric fact recall {s['numeric_fact_recall']:.1%} | "
-        f"literal fact recall {s['fact_recall']:.1%} | "
-        f"cites doc {s['cites_document']:.1%} | false abstention {s['false_abstention']:.1%} | "
-        f"abstention acc. {s['abstention_accuracy']:.1%} | p50 {s['latency_p50_ms'] / 1000:.1f} s"
+        f"{label}: numeric facts {s['numeric_fact_recall']:.1%} | cites doc "
+        f"{s['cites_document']:.1%} | abstention acc. {s['abstention_accuracy']:.1%} | "
+        f"false abstention {s['false_abstention']:.1%}"
+        + (
+            f" | faithfulness {s['faithfulness']:.1%} | correctness {s['correctness']:.1%}"
+            if s["faithfulness"] is not None and s["correctness"] is not None
+            else ""
+        )
     )
     typer.echo(f"Report: {path}")
 

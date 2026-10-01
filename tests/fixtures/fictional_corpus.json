@@ -1,0 +1,45 @@
+{
+  "note": "FICTIONAL documents for the CI evaluation gate. Not real regulation; references use a non-existent 'Z' series.",
+  "documents": [
+    {
+      "file": "bam/fictional-liquidite.pdf",
+      "issuer": "BAM",
+      "reference": "91/Z/2099",
+      "title": "Circulaire FICTIONAL n°91/Z/2099 relative au coussin de trésorerie",
+      "pages": [
+        "Circulaire FICTIONAL n°91/Z/2099 relative au coussin de trésorerie. Article premier Les établissements fictifs détiennent en permanence un coussin de trésorerie au moins égal à 140 % de leurs décaissements prévus sur 45 jours.",
+        "Article 2 Les titres de catégorie zêta sont retenus avec une décote de 35 %. Article 3 Le coussin est déclaré chaque trimestre au superviseur imaginaire."
+      ]
+    },
+    {
+      "file": "bam/fictional-gouvernance.pdf",
+      "issuer": "BAM",
+      "reference": "92/Z/2099",
+      "title": "Directive FICTIONAL n°92/Z/2099 relative au comité de vigilance",
+      "pages": [
+        "Directive FICTIONAL n°92/Z/2099 relative au comité de vigilance. Article premier Le comité de vigilance compte au moins sept membres dont deux indépendants.",
+        "Article 2 Le comité de vigilance se réunit au moins une fois par bimestre. Article 3 Son président ne peut exercer plus de deux mandats successifs."
+      ]
+    },
+    {
+      "file": "bam/fictional-clientele.pdf",
+      "issuer": "BAM",
+      "reference": "93/Z/2099",
+      "title": "Circulaire FICTIONAL n°93/Z/2099 relative aux doléances des usagers",
+      "pages": [
+        "Circulaire FICTIONAL n°93/Z/2099 relative aux doléances des usagers. Article premier Toute doléance reçoit une réponse écrite dans un délai de vingt-trois jours ouvrés.",
+        "Article 2 Le guichet des doléances est accessible gratuitement par téléphone et par courrier. Article 3 Un registre des doléances est conservé pendant onze ans."
+      ]
+    },
+    {
+      "file": "ammc/fictional-marche.pdf",
+      "issuer": "AMMC",
+      "reference": "94-99",
+      "title": "Circulaire FICTIONAL n°94/99 relative aux carnets d'ordres lunaires",
+      "pages": [
+        "Circulaire FICTIONAL n°94/99 relative aux carnets d'ordres lunaires. Article premier Le règlement-livraison des ordres lunaires intervient dans un délai de neuf jours de bourse.",
+        "Article 2 Le plafond d'indemnisation du fonds lunaire est fixé à trois cent mille dirhams par client."
+      ]
+    }
+  ]
+}

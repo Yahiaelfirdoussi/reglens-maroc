@@ -8,14 +8,19 @@ the expected document (and ideally the expected article).
 import json
 import re
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
+import structlog
+
 from reglens.evaluation import metrics as m
 from reglens.evaluation.golden import GoldenItem
+from reglens.evaluation.judge import Judge
 from reglens.evaluation.text_metrics import normalize
 from reglens.rag import Answer, RagPipeline
+
+log = structlog.get_logger(__name__)
 
 _ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩٫٪", "0123456789,%")
 # A sentence keeps the citations written right after its final punctuation ("…100%.[1]").
@@ -140,6 +145,12 @@ class AnswerResult:
     prompt_tokens: int
     completion_tokens: int
     answer: str
+    # LLM-as-judge (None when not judged: abstentions, judge off or judge error)
+    faithfulness: float | None = None
+    relevance: int | None = None
+    correctness: float | None = None
+    unsupported: tuple[str, ...] = ()
+    missing_facts: tuple[str, ...] = ()
 
 
 def score(item: GoldenItem, answer: Answer, latency_ms: float) -> AnswerResult:
@@ -175,19 +186,47 @@ def score(item: GoldenItem, answer: Answer, latency_ms: float) -> AnswerResult:
     )
 
 
-def evaluate_answers(items: list[GoldenItem], pipeline: RagPipeline) -> list[AnswerResult]:
+def evaluate_answers(
+    items: list[GoldenItem], pipeline: RagPipeline, judge: Judge | None = None
+) -> list[AnswerResult]:
     results = []
     for item in items:
         if item.status == "rejected":
             continue
         start = time.perf_counter()
         answer = pipeline.answer(item.question)
-        results.append(score(item, answer, (time.perf_counter() - start) * 1000))
+        result = score(item, answer, (time.perf_counter() - start) * 1000)
+        if judge is not None and item.answerable and answer.abstention == "none" and answer.text:
+            try:
+                verdict = judge.grade(item, answer.text, answer.sources)
+            except Exception as error:  # a judge failure must not stop the evaluation
+                log.warning("judge_failed", id=item.id, error=type(error).__name__)
+            else:
+                result = replace(
+                    result,
+                    faithfulness=verdict.faithfulness,
+                    relevance=verdict.relevance,
+                    correctness=verdict.correctness,
+                    unsupported=tuple(verdict.unsupported),
+                    missing_facts=tuple(verdict.missing_facts),
+                )
+        results.append(result)
     return results
 
 
-def summarize(rows: list[AnswerResult]) -> dict[str, float]:
+def _mean(values: list[float]) -> float | None:
+    return sum(values) / len(values) if values else None
+
+
+def summarize(
+    rows: list[AnswerResult], price_in: float = 0.0, price_out: float = 0.0
+) -> dict[str, float | None]:
+    """Aggregate metrics; prices are USD per million tokens (0 = unknown, cost not reported)."""
     answerable = [r for r in rows if r.answerable]
+    judged = [r for r in rows if r.faithfulness is not None]
+    tokens_in = sum(r.prompt_tokens for r in rows)
+    tokens_out = sum(r.completion_tokens for r in rows)
+    priced = price_in > 0 or price_out > 0
     unanswerable = [r for r in rows if not r.answerable]
     answered = [r for r in answerable if r.abstention == "none"]
     facts = sum(r.facts_total for r in answerable)
@@ -223,16 +262,35 @@ def summarize(rows: list[AnswerResult]) -> dict[str, float]:
         ),
         "latency_p50_ms": m.percentile(latency, 50),
         "latency_p95_ms": m.percentile(latency, 95),
-        "tokens_per_answer": (
-            sum(r.prompt_tokens + r.completion_tokens for r in rows) / len(rows) if rows else 0.0
+        "tokens_per_answer": (tokens_in + tokens_out) / len(rows) if rows else 0.0,
+        "cost_per_query_usd": (
+            (tokens_in * price_in + tokens_out * price_out) / 1e6 / len(rows)
+            if priced and rows
+            else None
         ),
+        "judged": float(len(judged)),
+        "faithfulness": _mean([r.faithfulness for r in judged if r.faithfulness is not None]),
+        "relevance": _mean([float(r.relevance) for r in judged if r.relevance is not None]),
+        "correctness": _mean([r.correctness for r in judged if r.correctness is not None]),
+        "fully_faithful": _mean([float(r.faithfulness == 1.0) for r in judged]),
     }
 
 
-def render_markdown(rows: list[AnswerResult], label: str, config: dict[str, object]) -> str:
-    def pct(x: float) -> str:
-        return f"{x:.1%}"
+def _pct(x: float | None) -> str:
+    return "n/a" if x is None else f"{x:.1%}"
 
+
+def _num(x: float | None, fmt: str = ".2f") -> str:
+    return "n/a" if x is None else format(x, fmt)
+
+
+def render_markdown(
+    rows: list[AnswerResult],
+    label: str,
+    config: dict[str, object],
+    price_in: float = 0.0,
+    price_out: float = 0.0,
+) -> str:
     lines = [
         f"# Answer evaluation: {label}",
         "",
@@ -240,50 +298,54 @@ def render_markdown(rows: list[AnswerResult], label: str, config: dict[str, obje
         "",
         "Configuration: " + ", ".join(f"`{k}={v}`" for k, v in config.items()),
         "",
-        "- **Numeric fact recall** (primary): expected facts containing a number (figures, "
-        'deadlines; number words count, e.g. "trente" = 30) found in the answer. Comparable '
-        "in every answer language. A wrongly refused question scores 0.",
-        "- **Literal fact recall**: all expected facts, matched literally. Text facts are French "
-        "wording, so English and Arabic answers that translate them correctly still miss "
-        "(semantic judging comes with LLM-as-judge in Phase 4).",
-        "- **All facts**: answerable questions whose answer contains every expected fact.",
+        "- **Numeric fact recall** (primary automatic metric): expected facts containing a "
+        "number whose numbers all appear in the answer (number words count), comparable in "
+        "every answer language. A wrongly refused question scores 0.",
+        "- **Literal fact recall**: expected facts matched literally (French wording).",
         "- **Cites document / article**: answered questions citing a chunk from the evidence "
         "document / labelled with the expected article.",
-        '- **False abstention**: answerable questions answered "not found".',
-        '- **Abstention accuracy**: unanswerable questions correctly answered "not found".',
+        '- **False abstention / abstention accuracy**: answerable questions answered "not '
+        'found" / unanswerable questions correctly answered "not found".',
+        "- **Faithfulness / relevance / correctness** (LLM-as-judge, answered questions only): "
+        "share of claims supported by the sources; 1-5 relevance to the question; share of "
+        "expected facts conveyed in any language.",
         "",
-        "| Slice | n | Numeric fact recall | Literal fact recall | All facts | Cites doc "
-        "| Cites article | Citation coverage | False abstention | Abstention acc. | p50 latency |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        "| Slice | n | Numeric facts | Literal facts | Cites doc | Cites article | Citation "
+        "coverage | False abst. | Abst. acc. | Faithfulness | Relevance | Correctness | p50 |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
 
     def row(name: str, subset: list[AnswerResult]) -> str:
         s = summarize(subset)
+        latency = s["latency_p50_ms"] or 0.0
         return (
-            f"| {name} | {s['n']:.0f} | {pct(s['numeric_fact_recall'])} | "
-            f"{pct(s['fact_recall'])} | {pct(s['all_facts_rate'])} | "
-            f"{pct(s['cites_document'])} | {pct(s['cites_article'])} | "
-            f"{pct(s['citation_coverage'])} | {pct(s['false_abstention'])} | "
-            f"{pct(s['abstention_accuracy'])} | {s['latency_p50_ms'] / 1000:.1f} s |"
+            f"| {name} | {len(subset)} | {_pct(s['numeric_fact_recall'])} | "
+            f"{_pct(s['fact_recall'])} | {_pct(s['cites_document'])} | "
+            f"{_pct(s['cites_article'])} | {_pct(s['citation_coverage'])} | "
+            f"{_pct(s['false_abstention'])} | {_pct(s['abstention_accuracy'])} | "
+            f"{_pct(s['faithfulness'])} | {_num(s['relevance'])} | {_pct(s['correctness'])} | "
+            f"{latency / 1000:.1f} s |"
         )
 
     lines.append(row("**All**", rows))
     for key in ("language", "difficulty"):
         for value in sorted({getattr(r, key) for r in rows}):
             lines.append(row(f"{key}={value}", [r for r in rows if getattr(r, key) == value]))
-    s = summarize(rows)
+    s = summarize(rows, price_in, price_out)
+    cost = s["cost_per_query_usd"]
     lines += [
         "",
-        f"Average tokens per answer: {s['tokens_per_answer']:.0f}. "
-        f"Latency p95: {s['latency_p95_ms'] / 1000:.1f} s.",
+        f"Average tokens per answer: {_num(s['tokens_per_answer'], '.0f')}. "
+        f"Latency p95: {(s['latency_p95_ms'] or 0.0) / 1000:.1f} s. Cost per query: "
+        + (f"${cost:.5f}" if cost is not None else "n/a (set REGLENS_LLM_PRICE_IN/OUT)")
+        + ".",
         "",
-        "Missing facts: "
+        f"Judged answers: {_num(s['judged'], '.0f')}; fully faithful (no unsupported claim): "
+        f"{_pct(s['fully_faithful'])}.",
+        "",
+        "Unsupported claims: "
         + (
-            "; ".join(
-                f"{r.id} ({r.facts_found}/{r.facts_total})"
-                for r in rows
-                if r.answerable and r.facts_found < r.facts_total
-            )
+            "; ".join(f"{r.id}: {' | '.join(r.unsupported)}" for r in rows if r.unsupported)
             or "none"
         ),
         "",
@@ -301,7 +363,12 @@ def render_markdown(rows: list[AnswerResult], label: str, config: dict[str, obje
 
 
 def write_answer_report(
-    rows: list[AnswerResult], out_dir: Path, label: str, config: dict[str, object]
+    rows: list[AnswerResult],
+    out_dir: Path,
+    label: str,
+    config: dict[str, object],
+    price_in: float = 0.0,
+    price_out: float = 0.0,
 ) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "answers.json").write_text(
@@ -309,7 +376,7 @@ def write_answer_report(
             {
                 "label": label,
                 "config": config,
-                "summary": summarize(rows),
+                "summary": summarize(rows, price_in, price_out),
                 "rows": [asdict(r) for r in rows],
             },
             indent=2,
@@ -318,5 +385,5 @@ def write_answer_report(
         encoding="utf-8",
     )
     path = out_dir / "answers.md"
-    path.write_text(render_markdown(rows, label, config), encoding="utf-8")
+    path.write_text(render_markdown(rows, label, config, price_in, price_out), encoding="utf-8")
     return path

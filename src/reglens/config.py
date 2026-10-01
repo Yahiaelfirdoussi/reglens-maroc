@@ -59,6 +59,11 @@ class Settings(BaseSettings):
     llm_model: str = ""
     llm_api_key: SecretStr | None = None
     llm_timeout_s: float = 60.0
+    # LLM-as-judge for evaluation (a different, stronger model than the answering one).
+    judge_model: str = ""
+    # Prices in USD per million tokens, for cost reporting (0 = unknown: tokens only).
+    llm_price_in: float = 0.0
+    llm_price_out: float = 0.0
     # Abstention floor: below this top retrieval score, answer "not found" without the LLM.
     # Calibrated for text-embedding-3-large (lowest answerable top score on the golden set:
     # 0.407, cross-lingual Arabic), so it only catches clearly unrelated questions.
