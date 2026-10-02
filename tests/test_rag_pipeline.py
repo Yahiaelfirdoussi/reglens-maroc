@@ -172,3 +172,26 @@ def test_evaluation_runner(retriever: Retriever) -> None:
     assert summary["hit@3"] == 1.0
     assert summary["doc_hit@3"] == 1.0
     assert "| **All** | 1 |" in render_markdown(report)
+
+
+def test_ingest_document_adds_skips_and_replaces(corpus: Path) -> None:
+    from reglens.ingestion.pipeline import ingest_document
+
+    store = QdrantStore(make_client(None, Path(":memory:")), "incremental")
+    embedder = HashEmbedder()
+    pdf = corpus / "bam/fictional-liquidite.pdf"
+    assert ingest_document(pdf, corpus, embedder, store, 120, 20)[0] == "added"
+    before = store.count()
+    assert ingest_document(pdf, corpus, embedder, store, 120, 20) == ("unchanged", before)
+    assert store.count() == before
+
+    doc = pymupdf.open()
+    doc.new_page().insert_textbox(
+        pymupdf.Rect(50, 50, 550, 800), "Article 1 Texte FICTIONAL court."
+    )
+    doc.save(pdf)  # same file, new content
+    status, chunks = ingest_document(pdf, corpus, embedder, store, 120, 20)
+    assert status == "updated"
+    assert store.count() == chunks  # the old chunks are gone, only the new ones remain
+    hit = Retriever(embedder, store).retrieve("texte court", k=1)[0].chunk
+    assert "court" in hit.text

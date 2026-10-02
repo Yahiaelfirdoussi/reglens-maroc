@@ -12,6 +12,6 @@ def test_help_lists_commands() -> None:
         assert command in result.output
 
 
-def test_unimplemented_command_exits_nonzero() -> None:
-    result = runner.invoke(app, ["serve"])
-    assert result.exit_code == 1
+def test_unknown_command_exits_nonzero() -> None:
+    result = runner.invoke(app, ["no-such-command"])
+    assert result.exit_code != 0

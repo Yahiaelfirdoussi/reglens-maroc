@@ -1,9 +1,14 @@
 """Builds the answering pipeline from settings; shared by the CLI, the UI and the API."""
 
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from reglens.cache import TTLCache
 from reglens.config import Settings, get_settings
 from reglens.generation.llm import LiteLLMClient
 from reglens.guardrails import ScopeClassifier
-from reglens.rag import RagPipeline
+from reglens.ingestion.pipeline import ingest_document
+from reglens.rag import Answer, RagPipeline
 from reglens.retrieval.embeddings import make_embedder
 from reglens.retrieval.reranker import make_reranker
 from reglens.retrieval.retriever import Retriever
@@ -61,3 +66,40 @@ def build_pipeline(
         ScopeClassifier(retriever.embedder),
         settings.abstain_min_score,
     )
+
+
+@dataclass
+class Service:
+    """Everything a long-running app needs: pipeline, index access and answer cache."""
+
+    settings: Settings
+    pipeline: RagPipeline
+    cache: TTLCache[Answer] = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.cache = TTLCache(self.settings.answer_cache_ttl_s, self.settings.answer_cache_size)
+
+    @property
+    def retriever(self) -> Retriever:
+        return self.pipeline.retriever
+
+    def ingest_file(self, pdf: Path, raw_dir: Path) -> tuple[str, int]:
+        """Add or update one document, then drop cached answers (they may be stale)."""
+        s = self.settings
+        result = ingest_document(
+            pdf,
+            raw_dir,
+            self.retriever.embedder,
+            self.retriever.store,
+            s.chunk_size,
+            s.chunk_overlap,
+            s.chunking,
+            s.contextual_header,
+        )
+        self.cache.clear()
+        return result
+
+
+def build_service(settings: Settings | None = None, warm: bool = False) -> Service:
+    settings = settings or get_settings()
+    return Service(settings, build_pipeline(settings, warm=warm))

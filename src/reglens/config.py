@@ -66,6 +66,25 @@ class Settings(BaseSettings):
     # Prices in USD per million tokens, for cost reporting (0 = unknown: tokens only).
     llm_price_in: float = 0.0
     llm_price_out: float = 0.0
+    # --- API ---
+    api_host: str = "127.0.0.1"  # 0.0.0.0 inside a container
+    api_port: int = 8000
+    # Comma-separated keys sent as X-API-Key. Admin keys may also ingest. No key configured
+    # leaves the API open (local development only).
+    api_keys: SecretStr | None = None
+    admin_api_keys: SecretStr | None = None
+    rate_limit_per_minute: int = 30  # per key (per client IP when the API is open)
+    cors_origins: str = ""  # comma-separated allowed origins; "" = no cross-origin access
+    answer_cache_ttl_s: int = 600  # 0 disables the answer cache
+    answer_cache_size: int = 512
+    upload_max_mb: int = 20
+    warm_on_start: bool = True
+
+    def keys(self, admin: bool = False) -> list[str]:
+        secret = self.admin_api_keys if admin else self.api_keys
+        raw = secret.get_secret_value() if secret else ""
+        return [k.strip() for k in raw.split(",") if k.strip()]
+
     # Abstention floor: below this top retrieval score, answer "not found" without the LLM.
     # Calibrated for text-embedding-3-large (lowest answerable top score on the golden set:
     # 0.407, cross-lingual Arabic), so it only catches clearly unrelated questions.

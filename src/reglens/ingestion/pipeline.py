@@ -1,5 +1,6 @@
 """Ingestion: PDFs + sidecars -> cleaned pages -> chunks -> embeddings -> vector store."""
 
+import hashlib
 import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -61,6 +62,10 @@ def sparse_text(chunk: Chunk) -> str:
     return " ".join(part for part in parts if part)
 
 
+def file_sha256(pdf: Path) -> str:
+    return hashlib.sha256(pdf.read_bytes()).hexdigest()
+
+
 def document_chunks(
     pdf: Path,
     raw_dir: Path,
@@ -72,6 +77,7 @@ def document_chunks(
     metadata = read_sidecar(pdf)
     file = pdf.relative_to(raw_dir).as_posix()
     pages = [clean_page(text) for text in page_texts(pdf)]
+    fingerprint = file_sha256(pdf)
     return [
         Chunk(
             id=chunk_id(file, index),
@@ -88,6 +94,7 @@ def document_chunks(
             published=metadata.published,
             section=span.section,
             header=contextual_header(metadata, span.section, header),
+            content_sha256=fingerprint,
         )
         for index, span in enumerate(split(pages, strategy, size, overlap))
     ]
@@ -139,9 +146,57 @@ def ingest(
     encoder = BM25Encoder.fit(keyword_texts)
     sparse = [encoder.encode_document(text) for text in keyword_texts]
     store.recreate(embedder.dim)
+    corpus_stats: dict[str, object] = {BM25_AVERAGE_LENGTH: encoder.average_length}
     for start in range(0, len(chunks), batch_size):
         end = start + batch_size
-        store.upsert(chunks[start:end], vectors[start:end], sparse[start:end])
+        store.upsert(chunks[start:end], vectors[start:end], sparse[start:end], corpus_stats)
     documents = len({c.file for c in chunks})
     log.info("ingest_done", documents=documents, chunks=len(chunks), embedder=embedder.name)
     return IngestStats(documents, len(chunks), truncated)
+
+
+BM25_AVERAGE_LENGTH = "bm25_average_length"
+
+
+def ingest_document(
+    pdf: Path,
+    raw_dir: Path,
+    embedder: Embedder,
+    store: QdrantStore,
+    size: int,
+    overlap: int,
+    strategy: Chunking = "fixed",
+    header: HeaderStyle = "off",
+) -> tuple[str, int]:
+    """Add or update one document without rebuilding the index (idempotent).
+
+    Returns ("unchanged" | "updated" | "added", chunk count). An unchanged file (same
+    content hash) is skipped; a changed file has its old chunks replaced. New chunks are
+    embedded before anything is deleted, so a failure leaves the index as it was.
+    """
+    chunks = document_chunks(pdf, raw_dir, size, overlap, strategy, header)
+    if not chunks:
+        return "unchanged", 0
+    if not store.exists():
+        store.recreate(embedder.dim)
+    file = chunks[0].file
+    previous = store.file_state(file)
+    if previous and previous.get("content_sha256") == chunks[0].content_sha256:
+        log.info("document_unchanged", file=file)
+        return "unchanged", len(chunks)
+
+    vectors = embedder.embed_documents([c.embedding_text for c in chunks])
+    reference = store.any_payload() or {}
+    average = reference.get(BM25_AVERAGE_LENGTH)
+    keyword_texts = [sparse_text(c) for c in chunks]
+    encoder = (
+        BM25Encoder(float(average))
+        if isinstance(average, int | float)
+        else BM25Encoder.fit(keyword_texts)
+    )
+    sparse = [encoder.encode_document(text) for text in keyword_texts]
+    store.delete_file(file)
+    store.upsert(chunks, vectors, sparse, {BM25_AVERAGE_LENGTH: encoder.average_length})
+    status = "updated" if previous else "added"
+    log.info("document_ingested", file=file, status=status, chunks=len(chunks))
+    return status, len(chunks)

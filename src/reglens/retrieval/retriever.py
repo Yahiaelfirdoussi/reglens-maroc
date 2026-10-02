@@ -29,6 +29,10 @@ class Retriever:
     def embedder(self) -> Embedder:
         return self._embedder
 
+    @property
+    def store(self) -> QdrantStore:
+        return self._store
+
     def reranks(self, question: str) -> bool:
         """Whether this question goes through the reranker (language gate)."""
         if self._reranker is None:

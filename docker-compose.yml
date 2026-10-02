@@ -1,0 +1,51 @@
+# API + Qdrant + chat interface.
+#   docker compose up -d
+#   docker compose run --rm api reglens ingest /data/raw      # index the documents once
+# Settings and keys come from .env (REGLENS_EMBEDDING_API_KEY, REGLENS_LLM_API_KEY,
+# REGLENS_API_KEYS, REGLENS_ADMIN_API_KEYS, model names, chunking).
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.19.1
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      args:
+        EXTRAS: api,llm
+    env_file: .env
+    environment:
+      REGLENS_QDRANT_URL: http://qdrant:6333
+    volumes:
+      - ./data/raw:/data/raw
+    ports:
+      - "8000:8000"
+    depends_on:
+      - qdrant
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: .
+      args:
+        EXTRAS: llm,ui
+    command: ["streamlit", "run", "ui/app.py", "--server.address", "0.0.0.0", "--server.port", "8501"]
+    env_file: .env
+    environment:
+      REGLENS_QDRANT_URL: http://qdrant:6333
+    ports:
+      - "8501:8501"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+    depends_on:
+      - qdrant
+    restart: unless-stopped
+
+volumes:
+  qdrant_storage:

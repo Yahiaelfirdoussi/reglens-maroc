@@ -17,7 +17,7 @@ jobs:
       - name: Install
         run: |
           uv venv .venv
-          uv pip install --python .venv/bin/python -e ".[dev]"
+          uv pip install --python .venv/bin/python -e ".[dev,api]"
       - name: Lint
         run: |
           .venv/bin/ruff check .
@@ -27,3 +27,23 @@ jobs:
         run: .venv/bin/pytest -q --ignore=tests/test_eval_gate.py
       - name: Evaluation gate (FICTIONAL fixture corpus, hit@6 >= 85%)
         run: .venv/bin/pytest -q tests/test_eval_gate.py
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -t reglens-api .
+      - name: Build interface image
+        run: docker build -t reglens-ui --build-arg EXTRAS=llm,ui .
+      - name: Images run as a non-root user
+        run: |
+          test "$(docker run --rm reglens-api id -u)" = "10001"
+          test "$(docker run --rm reglens-ui id -u)" = "10001"
+      - name: API image starts (no index yet) - /health ok, /ready reports 503
+        run: |
+          docker run -d --name api -p 8000:8000 -e REGLENS_EMBEDDING_MODEL=hash \
+            -e REGLENS_WARM_ON_START=false reglens-api
+          for i in $(seq 1 30); do curl -sf http://localhost:8000/health && break; sleep 1; done
+          curl -sf http://localhost:8000/health || { docker logs api; exit 1; }
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/ready)" = "503"

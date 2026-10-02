@@ -55,6 +55,14 @@ class RagPipeline:
         self._scope = scope
         self._min_score = min_score
 
+    @property
+    def retriever(self) -> Retriever:
+        return self._retriever
+
+    @property
+    def top_k(self) -> int:
+        return self._k
+
     def _prepare(self, question: str) -> Answer | tuple[str, Language, list[ScoredChunk], float]:
         """Everything before the LLM. Returns a final Answer (guardrail, abstention, no LLM)
         or what the LLM needs: question, language, sources and retrieval time."""

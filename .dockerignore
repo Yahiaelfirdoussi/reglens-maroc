@@ -1,0 +1,13 @@
+.git
+.venv
+.env
+.mypy_cache
+.pytest_cache
+.ruff_cache
+CLAUDE.md
+Makefile
+data
+eval/report
+tests
+docs
+**/__pycache__

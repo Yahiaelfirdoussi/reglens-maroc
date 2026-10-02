@@ -4,9 +4,10 @@ Search modes: "dense" (embeddings), "sparse" (BM25 only, for diagnostics) and "h
 (both, fused server-side with Reciprocal Rank Fusion).
 """
 
+import threading
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import structlog
 from qdrant_client import QdrantClient, models
@@ -39,9 +40,29 @@ def _sparse(vector: SparseVector) -> models.SparseVector:
     return models.SparseVector(indices=vector.indices, values=vector.values)
 
 
+class _SerializedClient:
+    """Wraps a Qdrant client so calls from concurrent API requests take turns: the embedded
+    (local) Qdrant is not built for concurrent access."""
+
+    def __init__(self, client: QdrantClient) -> None:
+        self._client = client
+        self._lock = threading.RLock()
+
+    def __getattr__(self, name: str) -> Any:
+        attribute = getattr(self._client, name)
+        if not callable(attribute):
+            return attribute
+
+        def call(*args: Any, **kwargs: Any) -> Any:
+            with self._lock:
+                return attribute(*args, **kwargs)
+
+        return call
+
+
 class QdrantStore:
     def __init__(self, client: QdrantClient, collection: str) -> None:
-        self._client = client
+        self._client: Any = _SerializedClient(client)
         self._collection = collection
 
     def recreate(self, dim: int) -> None:
@@ -63,6 +84,7 @@ class QdrantStore:
         chunks: Sequence[Chunk],
         vectors: Sequence[Sequence[float]],
         sparse: Sequence[SparseVector] | None = None,
+        extra_payload: dict[str, object] | None = None,
     ) -> None:
         sparse_vectors = sparse if sparse is not None else [None] * len(chunks)
         points = []
@@ -70,9 +92,8 @@ class QdrantStore:
             named: dict[str, list[float] | models.SparseVector] = {DENSE: list(vector)}
             if bm25 is not None:
                 named[SPARSE] = _sparse(bm25)
-            points.append(
-                models.PointStruct(id=chunk.id, vector=named, payload=chunk.model_dump(mode="json"))
-            )
+            payload = chunk.model_dump(mode="json") | (extra_payload or {})
+            points.append(models.PointStruct(id=chunk.id, vector=named, payload=payload))
         self._client.upsert(self._collection, points=points)
 
     def search(
@@ -124,4 +145,30 @@ class QdrantStore:
     def count(self) -> int:
         if not self._client.collection_exists(self._collection):
             return 0
-        return self._client.count(self._collection).count
+        return int(self._client.count(self._collection).count)
+
+    def exists(self) -> bool:
+        return bool(self._client.collection_exists(self._collection))
+
+    @staticmethod
+    def _file_filter(file: str) -> models.Filter:
+        return models.Filter(
+            must=[models.FieldCondition(key="file", match=models.MatchValue(value=file))]
+        )
+
+    def any_payload(self) -> dict[str, object] | None:
+        points, _ = self._client.scroll(self._collection, limit=1, with_payload=True)
+        return dict(points[0].payload or {}) if points else None
+
+    def file_state(self, file: str) -> dict[str, object] | None:
+        """Payload of one indexed chunk of ``file`` (None when the file is not indexed)."""
+        points, _ = self._client.scroll(
+            self._collection, scroll_filter=self._file_filter(file), limit=1, with_payload=True
+        )
+        return dict(points[0].payload or {}) if points else None
+
+    def delete_file(self, file: str) -> None:
+        """Remove every chunk of one source file."""
+        self._client.delete(
+            self._collection, points_selector=models.FilterSelector(filter=self._file_filter(file))
+        )

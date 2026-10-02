@@ -24,11 +24,6 @@ def main() -> None:
     configure_logging(settings.log_level, settings.log_json)
 
 
-def _not_implemented(command: str, phase: int) -> None:
-    typer.echo(f"`reglens {command}` is not implemented yet (roadmap phase {phase}).", err=True)
-    raise typer.Exit(code=1)
-
-
 @app.command()
 def fetch(
     pages: Annotated[Path, typer.Option(help="YAML list of listing pages.")] = Path(
@@ -186,9 +181,14 @@ def ingest(
     path: Annotated[Path, typer.Argument(help="Directory of PDFs + YAML sidecars.")] = Path(
         "data/raw"
     ),
+    update: Annotated[
+        bool,
+        typer.Option(help="Only add new or changed documents (skip unchanged, keep the index)."),
+    ] = False,
 ) -> None:
-    """Chunk, embed and index every document (rebuilds the collection)."""
+    """Chunk, embed and index documents (rebuilds the collection unless --update)."""
     from reglens.ingestion.pipeline import ingest as run_ingest
+    from reglens.ingestion.pipeline import ingest_document
     from reglens.retrieval.embeddings import make_embedder
     from reglens.retrieval.vector_store import QdrantStore, make_client
 
@@ -201,6 +201,27 @@ def ingest(
     embedder = make_embedder(
         settings.embedding_model, settings.model_cache_dir, settings.embedder_api_key()
     )
+    if update:
+        from collections import Counter
+
+        outcomes: Counter[str] = Counter()
+        for pdf in sorted(path.rglob("*.pdf")):
+            status, _ = ingest_document(
+                pdf,
+                path,
+                embedder,
+                store,
+                settings.chunk_size,
+                settings.chunk_overlap,
+                settings.chunking,
+                settings.contextual_header,
+            )
+            outcomes[status] += 1
+        typer.echo(
+            f"{outcomes['added']} added, {outcomes['updated']} updated, "
+            f"{outcomes['unchanged']} unchanged ({settings.collection_name})."
+        )
+        return
     stats = run_ingest(
         path,
         embedder,
@@ -469,6 +490,17 @@ def eval_guardrails(
 
 
 @app.command()
-def serve() -> None:
-    """Start the HTTP API."""
-    _not_implemented("serve", 5)
+def serve(
+    host: Annotated[str | None, typer.Option(help="Interface to bind.")] = None,
+    port: Annotated[int | None, typer.Option(help="Port.")] = None,
+) -> None:
+    """Start the HTTP API (FastAPI + uvicorn)."""
+    import uvicorn
+
+    settings = get_settings()
+    uvicorn.run(
+        "reglens.api.main:app",
+        host=host or settings.api_host,
+        port=port or settings.api_port,
+        log_config=None,  # structlog handles logging
+    )

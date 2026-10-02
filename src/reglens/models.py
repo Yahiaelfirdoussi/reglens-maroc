@@ -48,6 +48,8 @@ class Chunk(BaseModel):
     # Context prepended for embedding only ("BAM | 14/G/2013 | <title> | Article 4"); the
     # stored text stays the official wording used for citations.
     header: str | None = None
+    # Fingerprint of the source file, so re-ingesting an unchanged file can be skipped.
+    content_sha256: str | None = None
 
     @property
     def embedding_text(self) -> str:
