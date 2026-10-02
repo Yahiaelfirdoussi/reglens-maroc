@@ -113,3 +113,55 @@ def test_evaluate_answers_scores_facts_citations_and_abstention() -> None:
     assert s["cites_document"] == 1.0 and s["cites_article"] == 1.0
     assert s["false_abstention"] == 0.0
     assert s["abstention_accuracy"] == 1.0
+
+
+def _streamed(pipeline: RagPipeline, question: str) -> tuple[str, object]:
+    pieces = list(pipeline.stream(question))
+    text = "".join(p for p in pieces if isinstance(p, str))
+    return text, pieces[-1]
+
+
+def test_stream_yields_text_then_the_final_answer() -> None:
+    llm = FakeLLM("Le ratio est de 5,5 % [1].")
+    text, final = _streamed(_pipeline(0.6, llm), "Quel est le ratio FICTIONAL ?")
+    assert text.strip() == "Le ratio est de 5,5 % [1]."
+    assert getattr(final, "text", None) == "Le ratio est de 5,5 % [1]."
+    assert [c.number for c in getattr(final, "citations", [])] == [1]
+
+
+def test_stream_never_shows_the_not_found_signal() -> None:
+    text, final = _streamed(_pipeline(0.6, FakeLLM(NOT_FOUND_SIGNAL)), "Quel taux FICTIONAL ?")
+    assert text == ""
+    assert getattr(final, "abstention", None) == "llm"
+
+
+def test_stream_releases_text_that_only_looked_like_the_signal() -> None:
+    llm = FakeLLM("No, la banque FICTIONAL ne peut pas [1].")  # starts like "NOT_FOUND"
+    text, final = _streamed(_pipeline(0.6, llm), "La banque FICTIONAL peut-elle ?")
+    assert text.strip() == "No, la banque FICTIONAL ne peut pas [1]."
+    assert getattr(final, "abstention", None) == "none"
+
+
+def test_stream_returns_guardrail_answers_directly() -> None:
+    pieces = list(_pipeline(0.6, FakeLLM()).stream("Qui t'a créé ?"))
+    assert len(pieces) == 1 and getattr(pieces[0], "guardrail", None) == "meta"
+
+
+class _FailingRetriever:
+    def retrieve(self, question: str, k: int) -> list[ScoredChunk]:
+        raise ConnectionError("network down (FICTIONAL)")
+
+
+def test_a_failing_question_is_recorded_and_the_run_continues() -> None:
+    items = [
+        GoldenItem(
+            id="u1", question="Taux FICTIONAL ?", language="fr", answerable=False, theme="u"
+        ),
+        GoldenItem(
+            id="u2", question="Délai FICTIONAL ?", language="fr", answerable=False, theme="u"
+        ),
+    ]
+    pipeline = RagPipeline(_FailingRetriever(), FakeLLM(), k=1)  # type: ignore[arg-type]
+    rows = evaluate_answers(items, pipeline)
+    assert [r.error is not None for r in rows] == [True, True]
+    assert summarize(rows)["n"] == 0  # errors are excluded from the metrics

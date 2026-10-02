@@ -12,6 +12,7 @@ from reglens.log import configure_logging
 if TYPE_CHECKING:
     from reglens.evaluation.answers import AnswerResult
     from reglens.evaluation.golden import GoldenItem
+    from reglens.rag import Answer, RagPipeline
     from reglens.retrieval.retriever import Retriever
 
 app = typer.Typer(help="RegLens Maroc — grounded answers on Moroccan financial regulation.")
@@ -154,28 +155,13 @@ def golden_check(
 
 
 def _retriever() -> "Retriever":
-    from reglens.retrieval.embeddings import make_embedder
-    from reglens.retrieval.reranker import make_reranker
-    from reglens.retrieval.retriever import Retriever
-    from reglens.retrieval.vector_store import QdrantStore, make_client
+    from reglens.service import EmptyIndexError, build_retriever
 
-    settings = get_settings()
-    api_key = settings.qdrant_api_key.get_secret_value() if settings.qdrant_api_key else None
-    client = make_client(settings.qdrant_url, settings.qdrant_path, api_key)
-    store = QdrantStore(client, settings.collection_name)
-    if store.count() == 0:
-        typer.echo("The index is empty. Run `reglens ingest data/raw` first.", err=True)
-        raise typer.Exit(code=1)
-    return Retriever(
-        make_embedder(
-            settings.embedding_model, settings.model_cache_dir, settings.embedder_api_key()
-        ),
-        store,
-        settings.retrieval_mode,
-        make_reranker(settings.reranker, settings.model_cache_dir, settings.rerank_max_chars),
-        settings.rerank_candidates,
-        settings.rerank_language_set,
-    )
+    try:
+        return build_retriever()
+    except EmptyIndexError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from error
 
 
 def _config_snapshot() -> dict[str, object]:
@@ -239,41 +225,71 @@ def ingest(
         )
 
 
-@app.command()
-def ask(
-    question: Annotated[str, typer.Argument(help="Question in FR, AR or EN.")],
-    k: Annotated[int | None, typer.Option("--k", "-k", help="Sources to retrieve.")] = None,
-) -> None:
-    """Answer a question with citations (sources only when no LLM is configured)."""
-    from reglens.generation.llm import LiteLLMClient
-    from reglens.rag import RagPipeline
+def _pipeline(k: int | None = None) -> "RagPipeline":
+    """The full answering pipeline: guardrails, retrieval, abstention, LLM (if configured)."""
+    from reglens.service import EmptyIndexError, build_pipeline
 
-    settings = get_settings()
-    llm = None
-    if settings.llm_model:
-        key = settings.llm_api_key.get_secret_value() if settings.llm_api_key else None
-        llm = LiteLLMClient(settings.llm_model, key, settings.llm_timeout_s)
-    from reglens.guardrails import ScopeClassifier
+    try:
+        return build_pipeline(k=k)
+    except EmptyIndexError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from error
 
-    retriever = _retriever()
-    scope = ScopeClassifier(retriever.embedder)
-    answer = RagPipeline(
-        retriever, llm, k or settings.top_k, scope, settings.abstain_min_score
-    ).answer(question)
 
+def _print_answer(answer: "Answer", all_sources: bool = False) -> None:
+    """The answer, then its cited sources (or every retrieved source)."""
     if answer.guardrail != "ok" or answer.abstention != "none":
         typer.echo(answer.text or "")
         return
     if answer.text is None:
-        typer.echo("No LLM configured (REGLENS_LLM_MODEL): showing the retrieved sources.\n")
+        typer.echo("No LLM configured (REGLENS_LLM_MODEL): showing the retrieved sources.")
+        all_sources = True
     else:
-        typer.echo(answer.text + "\n")
-    for n, scored in enumerate(answer.sources, start=1):
+        typer.echo(answer.text)
+    cited = {c.number for c in answer.citations}
+    shown = [(n, s) for n, s in enumerate(answer.sources, start=1) if all_sources or n in cited]
+    if shown:
+        typer.echo("\nSources:")
+    for n, scored in shown:
         c = scored.chunk
         pages = f"p.{c.page_start}" + (f"-{c.page_end}" if c.page_end != c.page_start else "")
         where = f"{c.section}, {pages}" if c.section else pages
-        typer.echo(f"[{n}] {c.issuer} {c.reference or '-'} {where} (score {scored.score:.3f})")
-        typer.echo(f"    {c.text[:220]}...")
+        typer.echo(f"[{n}] {c.issuer} {c.reference or '-'} · {where} · {c.title[:70]}")
+        typer.echo(f"    « {c.text[:200].strip()}… »")
+    timing = answer.retrieval_ms + (answer.generation_ms or 0.0)
+    typer.echo(f"\n({timing / 1000:.1f} s)")
+
+
+@app.command()
+def ask(
+    question: Annotated[str, typer.Argument(help="Question in FR, AR or EN.")],
+    k: Annotated[int | None, typer.Option("--k", "-k", help="Sources to retrieve.")] = None,
+    all_sources: Annotated[
+        bool, typer.Option(help="Show every retrieved source, not only the cited ones.")
+    ] = False,
+) -> None:
+    """Answer one question with citations."""
+    _print_answer(_pipeline(k).answer(question), all_sources)
+
+
+@app.command()
+def chat(
+    all_sources: Annotated[
+        bool, typer.Option(help="Show every retrieved source, not only the cited ones.")
+    ] = False,
+) -> None:
+    """Ask questions one after another (setup loaded once). Empty line or Ctrl-D to quit."""
+    pipeline = _pipeline()
+    typer.echo("RegLens: ask a question in French, English or Arabic. Empty line to quit.\n")
+    while True:
+        try:
+            question = input("» ").strip()
+        except (EOFError, KeyboardInterrupt):
+            break
+        if not question:
+            break
+        _print_answer(pipeline.answer(question), all_sources)
+        typer.echo("")
 
 
 def _answer_rows(
@@ -290,7 +306,9 @@ def _answer_rows(
         typer.echo("Set REGLENS_LLM_MODEL (and REGLENS_LLM_API_KEY) to evaluate answers.", err=True)
         raise typer.Exit(code=1)
     key = settings.llm_api_key.get_secret_value() if settings.llm_api_key else None
-    llm = LiteLLMClient(settings.llm_model, key, settings.llm_timeout_s)
+    llm = LiteLLMClient(
+        settings.llm_model, key, settings.llm_timeout_s, settings.llm_reasoning_effort
+    )
     grader = None
     if judge:
         if not settings.judge_model:
@@ -301,6 +319,7 @@ def _answer_rows(
     config: dict[str, object] = {
         "llm": settings.llm_model,
         "judge": settings.judge_model if judge else "none",
+        "reasoning_effort": settings.llm_reasoning_effort or "default",
         "abstain_min_score": settings.abstain_min_score,
     }
     return evaluate_answers(items, pipeline, grader), config

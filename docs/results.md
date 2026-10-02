@@ -338,3 +338,35 @@ questions. CI turns it into PDFs, indexes it through `reglens ingest` (offline h
 embedder, local Qdrant) and runs `reglens eval --min-hit-rate 0.85`, which exits with an
 error below the gate. Fixture hit@6 today: 100% (8/8), so one regression is tolerated and
 two fail the build.
+
+## Interface and speed
+
+`reglens chat` (questions in a row) and a Streamlit interface (`ui/app.py`: streamed answers,
+grounded / not-found / out-of-scope badge, cited sources with article, page, quoted passage
+and link to the official text, right-to-left Arabic).
+
+The first question in the interface took 11.4 s. Profiling one question:
+
+| Stage | Before | Fix |
+|---|---:|---|
+| LiteLLM import + pipeline build | 5.4 s + 4.6 s on the first question | done at page load, with one tiny warm-up call to each provider; LiteLLM's bundled price list instead of a download |
+| Question embedded for the scope check, then again for retrieval | 0.40 + 0.32 s | embedded once (cache shared by guardrails and retrieval) |
+| LLM answer | 1.7-3.1 s | streamed (first words ~1 s); `reasoning_effort=minimal` |
+| Old comparison indexes loaded at startup | 177 MB | deleted (results recorded above); 60 MB |
+
+Result for the same first question: **2.4 s, first words after 1.7 s** (page load ~10 s,
+once). `reasoning_effort=minimal` was checked on all 113 questions with the judge:
+
+| | Default effort (Phase 4) | `minimal` |
+|---|---:|---:|
+| Faithfulness | 96.3% | 97.1% |
+| Correctness | 94.6% | 94.5% |
+| Relevance | 4.89 | 4.90 |
+| Numeric fact recall | 85.3% | 82.1% |
+| Abstention accuracy | 88.2% | 94.1% |
+| False abstention | 4.2% | 5.2% |
+
+Every difference is about one question, within run-to-run noise, so `minimal` is kept. Most
+of the speed gain comes from the warm-up, streaming and single embedding; `minimal` adds a
+smaller, network-dependent saving. The answer evaluation now records a failing question
+(network error) instead of losing the whole run, and network retries last about a minute.

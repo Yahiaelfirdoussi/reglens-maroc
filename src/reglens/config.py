@@ -59,6 +59,8 @@ class Settings(BaseSettings):
     llm_model: str = ""
     llm_api_key: SecretStr | None = None
     llm_timeout_s: float = 60.0
+    # Reasoning effort for reasoning models ("minimal" is fastest); "" = provider default.
+    llm_reasoning_effort: str = ""
     # LLM-as-judge for evaluation (a different, stronger model than the answering one).
     judge_model: str = ""
     # Prices in USD per million tokens, for cost reporting (0 = unknown: tokens only).

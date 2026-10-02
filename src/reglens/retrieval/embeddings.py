@@ -108,7 +108,7 @@ class OpenAIEmbedder:
         api_key: str,
         client: httpx.Client | None = None,
         batch_size: int = 128,
-        retries: int = 4,
+        retries: int = 6,  # backoff 1+2+...+32 s: rides out a short network outage
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         if not api_key:
@@ -124,6 +124,7 @@ class OpenAIEmbedder:
         self._retries = retries
         self._sleep = sleep
         self.tokens_used = 0  # billed tokens, for cost reporting
+        self._query_cache: dict[str, list[float]] = {}  # guardrails and retrieval share it
         self._dim = self.KNOWN_DIMS.get(model) or len(self._embed(["dimension probe"])[0])
 
     @property
@@ -167,7 +168,12 @@ class OpenAIEmbedder:
         return vectors
 
     def embed_query(self, text: str) -> list[float]:
-        return self._embed([text])[0]
+        """Embed a question once: the scope check and retrieval reuse the same vector."""
+        if text not in self._query_cache:
+            if len(self._query_cache) >= 256:
+                self._query_cache.pop(next(iter(self._query_cache)))
+            self._query_cache[text] = self._embed([text])[0]
+        return self._query_cache[text]
 
 
 def make_embedder(model: str, cache_dir: Path, api_key: str | None = None) -> Embedder:

@@ -151,6 +151,7 @@ class AnswerResult:
     correctness: float | None = None
     unsupported: tuple[str, ...] = ()
     missing_facts: tuple[str, ...] = ()
+    error: str | None = None  # the question could not be answered (e.g. network failure)
 
 
 def score(item: GoldenItem, answer: Answer, latency_ms: float) -> AnswerResult:
@@ -186,6 +187,28 @@ def score(item: GoldenItem, answer: Answer, latency_ms: float) -> AnswerResult:
     )
 
 
+def _error_row(item: GoldenItem, error: str) -> AnswerResult:
+    return AnswerResult(
+        id=item.id,
+        language=item.language,
+        difficulty=item.difficulty,
+        answerable=item.answerable,
+        abstention="none",
+        facts_found=0,
+        facts_total=0,
+        numeric_found=0,
+        numeric_total=0,
+        cites_document=False,
+        cites_article=False,
+        citation_coverage=0.0,
+        latency_ms=0.0,
+        prompt_tokens=0,
+        completion_tokens=0,
+        answer="",
+        error=error,
+    )
+
+
 def evaluate_answers(
     items: list[GoldenItem], pipeline: RagPipeline, judge: Judge | None = None
 ) -> list[AnswerResult]:
@@ -194,7 +217,12 @@ def evaluate_answers(
         if item.status == "rejected":
             continue
         start = time.perf_counter()
-        answer = pipeline.answer(item.question)
+        try:
+            answer = pipeline.answer(item.question)
+        except Exception as error:  # one failure must not lose the whole run
+            log.warning("answer_failed", id=item.id, error=type(error).__name__)
+            results.append(_error_row(item, f"{type(error).__name__}: {error}"[:200]))
+            continue
         result = score(item, answer, (time.perf_counter() - start) * 1000)
         if judge is not None and item.answerable and answer.abstention == "none" and answer.text:
             try:
@@ -221,7 +249,9 @@ def _mean(values: list[float]) -> float | None:
 def summarize(
     rows: list[AnswerResult], price_in: float = 0.0, price_out: float = 0.0
 ) -> dict[str, float | None]:
-    """Aggregate metrics; prices are USD per million tokens (0 = unknown, cost not reported)."""
+    """Aggregate metrics; prices are USD per million tokens (0 = unknown, cost not reported).
+    Questions that failed with an error are excluded (and listed in the report)."""
+    rows = [r for r in rows if r.error is None]
     answerable = [r for r in rows if r.answerable]
     judged = [r for r in rows if r.faithfulness is not None]
     tokens_in = sum(r.prompt_tokens for r in rows)
@@ -349,12 +379,15 @@ def render_markdown(
             or "none"
         ),
         "",
+        "Errors (excluded from the metrics): "
+        + (", ".join(f"{r.id} ({r.error})" for r in rows if r.error) or "none"),
+        "",
         "Wrong abstentions: "
         + (
             ", ".join(
                 f"{r.id} ({'refused' if r.answerable else 'answered'})"
                 for r in rows
-                if (r.abstention != "none") == r.answerable
+                if r.error is None and (r.abstention != "none") == r.answerable
             )
             or "none"
         ),
