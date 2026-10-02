@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pymupdf
+import pytest
 
 from reglens.ingestion.metadata import read_sidecar, write_sidecar
 from reglens.ingestion.ocr import (
@@ -25,8 +26,10 @@ def _make_pdf(path: Path, pages: int, native: bool) -> Path:
         page = doc.new_page()
         if native:
             page.insert_textbox(pymupdf.Rect(50, 50, 550, 800), NATIVE_TEXT)
-        else:  # image-like page: drawings only, no text layer
-            page.draw_rect(pymupdf.Rect(50, 50, 300, 300), fill=(0.5, 0.5, 0.5))
+        else:  # scanned page: an image, no text layer
+            pixmap = pymupdf.Pixmap(pymupdf.csRGB, pymupdf.IRect(0, 0, 40, 40), False)
+            pixmap.clear_with(128)
+            page.insert_image(pymupdf.Rect(50, 50, 300, 300), pixmap=pixmap)
     doc.save(path)
     doc.close()
     write_sidecar(
@@ -114,3 +117,30 @@ def test_native_pdf_is_left_alone(tmp_path: Path) -> None:
     assert not ocr_path(pdf).exists()
     assert "FICTIONAL" in page_texts(pdf)[0]
     assert read_sidecar(pdf).text_source == "native"
+
+
+def test_short_text_document_is_not_treated_as_scanned(tmp_path: Path) -> None:
+    doc = pymupdf.open()
+    doc.new_page().insert_text((50, 72), "Note FICTIONAL courte.")  # < 100 characters
+    with doc:
+        assert not needs_ocr(doc)  # real text, no image: never OCR'd
+
+
+def test_missing_tesseract_raises_a_clear_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from reglens.ingestion import ocr
+
+    pdf = _make_pdf(tmp_path / "scan.pdf", 1, native=False)
+    monkeypatch.setattr(ocr, "TESSERACT_CMD", "no-such-tesseract-FICTIONAL")
+    with pytest.raises(ocr.OcrUnavailableError, match="needs OCR"):
+        ocr_document(pdf)
+
+
+def test_text_drawn_as_vector_outlines_needs_ocr() -> None:
+    doc = pymupdf.open()
+    page = doc.new_page()
+    for i in range(60):  # many small shapes, no text layer, no image
+        page.draw_rect(pymupdf.Rect(10 + i, 10, 12 + i, 20), fill=(0, 0, 0))
+    with doc:
+        assert needs_ocr(doc)

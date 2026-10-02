@@ -28,7 +28,7 @@ from reglens.config import Settings, get_settings
 from reglens.generation.citations import Citation
 from reglens.guardrails import MAX_QUESTION_CHARS
 from reglens.ingestion.metadata import write_sidecar
-from reglens.ingestion.ocr import ocr_document
+from reglens.ingestion.ocr import OcrUnavailableError, ocr_document
 from reglens.log import configure_logging
 from reglens.models import DocumentMetadata, Issuer, Language
 from reglens.rag import Answer
@@ -328,7 +328,14 @@ def create_app(settings: Settings | None = None, service: Service | None = None)
                 title=title, issuer=issuer, reference=reference, url=url, language=language
             ),
         )
-        ocr = ocr_document(target).status == "ocr"
+        try:
+            ocr = ocr_document(target).status == "ocr"
+        except OcrUnavailableError as error:
+            target.unlink(missing_ok=True)
+            target.with_suffix(".yaml").unlink(missing_ok=True)
+            raise HTTPException(
+                503, "This PDF is scanned and needs OCR, which is not available on this server."
+            ) from error
         status, chunks = svc().ingest_file(target, raw_dir)
         assert status in ("added", "updated", "unchanged")
         log.info("api_ingest", file=target.name, status=status, chunks=chunks, ocr=ocr)

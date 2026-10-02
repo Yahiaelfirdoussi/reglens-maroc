@@ -221,3 +221,19 @@ def test_api_starts_even_when_the_index_is_missing(tmp_path: Path) -> None:
         assert ready.status_code == 503 and "EmptyIndexError" in ready.json()["error"]
         query = down.post("/v1/query", json={"question": "Ratio ?"}, headers={"X-API-Key": USER})
         assert query.status_code == 503
+
+
+def test_scanned_upload_without_ocr_returns_503(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from reglens.ingestion import ocr
+
+    monkeypatch.setattr(ocr, "TESSERACT_CMD", "no-such-tesseract-FICTIONAL")
+    doc = pymupdf.open()
+    pixmap = pymupdf.Pixmap(pymupdf.csRGB, pymupdf.IRect(0, 0, 40, 40), False)
+    pixmap.clear_with(128)
+    doc.new_page().insert_image(pymupdf.Rect(50, 50, 300, 300), pixmap=pixmap)
+    form = {"title": "Scan FICTIONAL", "issuer": "BAM", "url": "https://x.test/s.pdf"}
+    files = {"file": ("scan.pdf", doc.tobytes(), "application/pdf")}
+    response = client.post("/v1/ingest", data=form, files=files, headers={"X-API-Key": ADMIN})
+    assert response.status_code == 503 and "OCR" in response.json()["detail"]

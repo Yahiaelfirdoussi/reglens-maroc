@@ -1,6 +1,8 @@
 """Detect scanned PDFs and OCR them.
 
-A PDF counts as scanned when its text layer averages fewer than ``MIN_CHARS_PER_PAGE``
+A PDF counts as scanned when its text layer averages fewer than ``MIN_CHARS_PER_PAGE`` and
+its pages carry something to read: images, or text drawn as vector outlines. A short
+document that has real text is never OCR'd
 characters per page. OCR text is written per page to ``<file>.ocr.json`` next to the PDF (the
 original is never modified), and the metadata sidecar records ``text_source``.
 
@@ -10,6 +12,7 @@ dependency). It sits behind the ``PageOcr`` callable so tests can inject a fake.
 
 import json
 import os
+import shutil
 import subprocess
 from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor
@@ -132,8 +135,30 @@ def mean_chars_per_page(doc: pymupdf.Document) -> float:
     return float(sum(len(page.get_text().strip()) for page in doc) / doc.page_count)
 
 
+MIN_VECTOR_SHAPES = 50  # text converted to outlines draws thousands of shapes per page
+
+
+def _has_visual_content(page: pymupdf.Page) -> bool:
+    """Page images, or text drawn as vector outlines (no text layer, thousands of shapes)."""
+    return bool(page.get_images()) or len(page.get_drawings()) >= MIN_VECTOR_SHAPES
+
+
 def needs_ocr(doc: pymupdf.Document, threshold: int = MIN_CHARS_PER_PAGE) -> bool:
-    return mean_chars_per_page(doc) < threshold
+    """Scanned = little text AND visual content to read (images or outlined text).
+
+    A short document that has real text (a one-line note) is never OCR'd.
+    """
+    if mean_chars_per_page(doc) >= threshold:
+        return False
+    return any(_has_visual_content(page) for page in doc)
+
+
+class OcrUnavailableError(RuntimeError):
+    """A document needs OCR but Tesseract is not installed on this machine."""
+
+
+def tesseract_available() -> bool:
+    return shutil.which(TESSERACT_CMD) is not None
 
 
 @dataclass(frozen=True)
@@ -171,6 +196,11 @@ def ocr_document(
         elif ocr_path(pdf).exists() and not force:
             status = "cached"
         else:
+            if engine is tesseract_page and not tesseract_available():
+                raise OcrUnavailableError(
+                    f"{pdf.name} is a scanned PDF and needs OCR, but Tesseract "
+                    f"({TESSERACT_CMD!r}) is not installed"
+                )
             texts = [engine(page, language, dpi) for page in doc]
             payload = {
                 "engine": "tesseract",
