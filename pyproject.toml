@@ -68,7 +68,7 @@ mypy_path = "src"
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["fitz", "fitz.*", "litellm", "litellm.*"]
+module = ["fitz", "fitz.*", "litellm", "litellm.*", "fastembed", "fastembed.*"]
 ignore_missing_imports = true
 
 # PyMuPDF ships partial, inconsistent annotations; treat it as untyped.
