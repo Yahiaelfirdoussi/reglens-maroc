@@ -1,12 +1,21 @@
 """Post-generation citation handling: keep only citations that point to real sources."""
 
 import re
+from urllib.parse import quote
 
 from pydantic import BaseModel
 
 from reglens.models import ScoredChunk
 
 _CITATION = re.compile(r"\[(\d+)\]")
+# Characters already meaningful in a URL; everything else (spaces, "°", accents) is encoded.
+_URL_SAFE = ":/?&=%#+@;,~!$'()*"
+
+
+def page_link(url: str, page: int) -> str:
+    """Link to the official PDF opened at ``page`` (browsers honour ``#page=N`` when they
+    display the PDF; a server that forces a download opens it at page 1)."""
+    return f"{quote(url.split('#', 1)[0], safe=_URL_SAFE)}#page={page}"
 
 
 class Citation(BaseModel):
@@ -17,6 +26,7 @@ class Citation(BaseModel):
     page_start: int
     page_end: int
     url: str
+    link: str  # the official PDF at the cited page
     snippet: str
 
 
@@ -47,6 +57,7 @@ def build_citations(
             page_start=sources[n - 1].chunk.page_start,
             page_end=sources[n - 1].chunk.page_end,
             url=sources[n - 1].chunk.url,
+            link=page_link(sources[n - 1].chunk.url, sources[n - 1].chunk.page_start),
             snippet=sources[n - 1].chunk.text[:snippet_chars],
         )
         for n in cited

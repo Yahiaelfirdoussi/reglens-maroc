@@ -13,7 +13,7 @@ and page, and abstain when the texts do not contain the answer.
 
 ```bash
 uv venv --python 3.11 .venv
-uv pip install --python .venv/bin/python -e ".[dev,llm,api,ui,local]"   # local: offline ONNX models
+uv pip install --python .venv/bin/python -e ".[dev,llm,api,local]"   # local: offline ONNX models
 .venv/bin/pytest -q                            # tests (offline: no model, no API key)
 ```
 
@@ -39,7 +39,7 @@ REGLENS_CHUNK_OVERLAP=200
 .venv/bin/reglens ingest data/raw                          # chunk, embed, index (--update: changed files only)
 .venv/bin/reglens ask "Quel est le ratio de levier minimum ?"
 .venv/bin/reglens chat                                     # several questions in a row
-.venv/bin/streamlit run ui/app.py                          # chat interface, port 8501
+.venv/bin/reglens serve                                    # web page + API: http://localhost:8000
 .venv/bin/reglens eval --answers --judge                   # full evaluation report
 ```
 
@@ -53,11 +53,22 @@ curl -X POST localhost:8000/v1/query -H "X-API-Key: $KEY" -H "Content-Type: appl
 
 | Endpoint | Purpose |
 |---|---|
+| `GET /` | Web page: chat with streamed answers, source panel, FR / EN / AR interface |
 | `POST /v1/query` | Cited answer, sources, status (`answered`, `not_found`, `out_of_scope`) |
 | `POST /v1/query/stream` | Same, as Server-Sent Events: `token` events, then one `answer` event |
+| `GET /v1/corpus` | Documents, regulators and publication years in the index |
+| `POST /v1/feedback` | Rating of one answer (`up` / `down`, by request ID), counted in metrics |
 | `POST /v1/ingest` | Admin key: upload a PDF + metadata; OCR'd if scanned; unchanged files skipped |
 | `GET /health`, `GET /ready` | Liveness; readiness (index loaded, 503 with the reason otherwise) |
 | `GET /metrics` | Prometheus: requests, stage latencies, cache, guardrails, abstentions, tokens |
+
+Optional filters restrict the search: `"issuers": ["AMMC"]`, `"languages": ["fr"]`,
+`"date_from": "2020-01-01"`, `"date_to": "2024-12-31"` (publication date, inclusive). Each
+source and citation includes a `link` to the official PDF at the cited page.
+
+For follow-up questions, send the earlier turns as `"history": [{"question": "…", "answer": "…"}]`
+(oldest first): the message is rewritten into a standalone question, returned as
+`standalone_question`. Follow-ups are not cached.
 
 Every response carries an `X-Request-ID`, also present on every JSON log line. Repeated
 questions are answered from a time-limited cache, cleared on each ingest.
@@ -65,12 +76,12 @@ questions are answered from a time-limited cache, cleared on each ingest.
 ## Docker
 
 ```bash
-docker compose up -d                                   # Qdrant + API (:8000) + interface (:8501)
+docker compose up -d                                   # Qdrant + API and web page (:8000)
 docker compose run --rm api reglens ingest /data/raw   # index ./data/raw once
 ```
 
 Images are slim, run as a non-root user and include Tesseract (French, Arabic) for scanned
-uploads. CI builds both images on every push.
+uploads. CI builds the image on every push and checks the API and the web page start.
 
 ## Configuration
 
@@ -89,6 +100,7 @@ defaults live in `src/reglens/config.py`. The main ones:
 | `QDRANT_URL` / `QDRANT_PATH` | local `data/qdrant` | Qdrant server URL (Docker) or embedded folder |
 | `API_KEYS`, `ADMIN_API_KEYS` | none (open) | Comma-separated `X-API-Key` values |
 | `RATE_LIMIT_PER_MINUTE` | 30 | Per key (per IP when open) |
+| `PUBLIC_QUERIES` | false | Keyless callers (the web page) may ask questions, rate-limited per IP |
 | `CORS_ORIGINS` | none | Comma-separated allowed origins |
 | `ANSWER_CACHE_TTL_S`, `UPLOAD_MAX_MB` | 600, 20 | Answer cache lifetime; upload size cap |
 | `LOG_JSON`, `LOG_LEVEL` | false, INFO | JSON logs in production |
@@ -98,7 +110,7 @@ defaults live in `src/reglens/config.py`. The main ones:
 | Path | Purpose |
 |---|---|
 | `src/reglens/` | Library code (ingestion, retrieval, generation, evaluation, guardrails) |
-| `ui/app.py` | Streamlit chat interface |
+| `src/reglens/web/` | Web page served by the API at `/` (HTML, CSS, JS; no build step) |
 | `data/selection.yaml` | Curated corpus: official URLs and verified metadata |
 | `data/raw/` | Source PDFs + `<file>.yaml` metadata sidecars (PDFs not committed) |
 | `eval/golden_set.jsonl` | 113 reviewed evaluation questions with quoted evidence |

@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from reglens.api.main import create_app
 from reglens.config import Settings
-from reglens.generation.llm import FakeLLM
+from reglens.generation.llm import FakeLLM, Message
 from reglens.guardrails import ScopeClassifier
 from reglens.ingestion.metadata import write_sidecar
 from reglens.ingestion.pipeline import ingest
@@ -35,7 +35,7 @@ def _pdf(path: Path | None, text: str) -> bytes:
     return data
 
 
-def _client(tmp_path: Path, **overrides: object) -> TestClient:
+def _client(tmp_path: Path, llm: FakeLLM | None = None, **overrides: object) -> TestClient:
     raw = tmp_path / "raw"
     pdf = raw / "bam" / "fictional.pdf"
     _pdf(pdf, TEXT)
@@ -62,7 +62,7 @@ def _client(tmp_path: Path, **overrides: object) -> TestClient:
     ingest(raw, embedder, store, 1200, 200, strategy="legal")
     pipeline = RagPipeline(
         Retriever(embedder, store),
-        FakeLLM("Le ratio est de 140 % [1]."),
+        llm or FakeLLM("Le ratio est de 140 % [1]."),
         k=3,
         scope=ScopeClassifier(embedder),
     )
@@ -237,3 +237,23 @@ def test_scanned_upload_without_ocr_returns_503(
     files = {"file": ("scan.pdf", doc.tobytes(), "application/pdf")}
     response = client.post("/v1/ingest", data=form, files=files, headers={"X-API-Key": ADMIN})
     assert response.status_code == 503 and "OCR" in response.json()["detail"]
+
+
+class DownLLM(FakeLLM):
+    """A provider that fails on every call (quota exhausted, network)."""
+
+    def complete(self, messages: list[Message]) -> str:
+        raise ConnectionError("provider down (FICTIONAL)")
+
+    def stream(self, messages: list[Message]) -> Iterator[str]:
+        raise ConnectionError("provider down (FICTIONAL)")
+
+
+def test_provider_failure_returns_503_and_a_stream_error_event(tmp_path: Path) -> None:
+    with _client(tmp_path, llm=DownLLM()) as client:
+        headers = {"X-API-Key": USER}
+        question = {"question": "Quel est le ratio de liquidité ?"}
+        response = client.post("/v1/query", json=question, headers=headers)
+        assert response.status_code == 503
+        stream = client.post("/v1/query/stream", json=question, headers=headers)
+        assert "event: error" in stream.text and "event: answer" not in stream.text

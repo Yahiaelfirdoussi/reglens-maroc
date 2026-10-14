@@ -10,10 +10,11 @@ from typing import Generic, TypeVar
 V = TypeVar("V")
 
 
-def cache_key(question: str, k: int) -> str:
-    """Questions differing only by case or spacing share an entry."""
+def cache_key(question: str, k: int, scope: str = "") -> str:
+    """Questions differing only by case or spacing share an entry; ``scope`` (the search
+    filter) keeps filtered and unfiltered answers apart."""
     normalized = re.sub(r"\s+", " ", question).strip().casefold()
-    return f"{k}|{normalized}"
+    return f"{k}|{scope}|{normalized}" if scope else f"{k}|{normalized}"
 
 
 class TTLCache(Generic[V]):

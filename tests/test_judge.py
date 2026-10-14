@@ -58,7 +58,7 @@ def test_judge_prompt_carries_question_answer_sources_and_reference() -> None:
 
 
 class _Retriever:
-    def retrieve(self, question: str, k: int) -> list[ScoredChunk]:
+    def retrieve(self, question: str, k: int, where: object = None) -> list[ScoredChunk]:
         return [_source()]
 
 

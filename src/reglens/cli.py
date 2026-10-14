@@ -452,6 +452,42 @@ def eval_answers(
     typer.echo(f"Report: {path}")
 
 
+@app.command("eval-followups")
+def eval_followups(
+    cases_file: Annotated[Path, typer.Argument(help="Follow-up cases (JSONL).")] = Path(
+        "eval/followups.jsonl"
+    ),
+    golden_set: Annotated[Path, typer.Option(help="Golden set the cases refer to.")] = Path(
+        "eval/golden_set.jsonl"
+    ),
+    out: Annotated[Path, typer.Option(help="Markdown report.")] = Path("eval/report/followups.md"),
+) -> None:
+    """Measure follow-up questions, searched alone vs. rewritten with the conversation."""
+    from reglens.evaluation.followups import evaluate_followups, load_cases, render_markdown
+    from reglens.evaluation.followups import summary as followup_summary
+    from reglens.evaluation.golden import load_golden
+    from reglens.service import build_pipeline
+
+    pipeline = build_pipeline()
+    golden = {item.id: item for item in load_golden(golden_set)}
+    rows = evaluate_followups(load_cases(cases_file), golden, pipeline)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(render_markdown(rows, pipeline.top_k), encoding="utf-8")
+    for kind in ("follow_up", "standalone"):
+        s = followup_summary(rows, kind)
+        typer.echo(
+            f"{kind}: n={s['n']:.0f} hit {s['hit_alone']:.1%} -> {s['hit_context']:.1%}, "
+            f"MRR {s['mrr_alone']:.3f} -> {s['mrr_context']:.3f}, "
+            f"answered {s['answered']:.1%}, rewrite p50 {s['rewrite_ms_p50']:.0f} ms"
+        )
+    u = followup_summary(rows, "unanswerable")
+    typer.echo(
+        f"unanswerable: n={u['n']:.0f} abstained {u['abstained_alone']:.1%} alone -> "
+        f"{u['abstained_context']:.1%} with context"
+    )
+    typer.echo(f"Report: {out}")
+
+
 @app.command("eval-guardrails")
 def eval_guardrails(
     guard_set: Annotated[Path, typer.Argument(help="Labelled guardrail cases (JSONL).")] = Path(

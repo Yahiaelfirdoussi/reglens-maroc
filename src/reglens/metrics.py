@@ -36,3 +36,9 @@ LLM_TOKENS = Counter("reglens_llm_tokens_total", "LLM tokens used.", ["kind"], r
 RATE_LIMITED = Counter(
     "reglens_rate_limited_total", "Requests rejected by the rate limit.", registry=REGISTRY
 )
+FEEDBACK = Counter(
+    "reglens_feedback_total",
+    "Answer ratings sent from the web page.",
+    ["rating"],
+    registry=REGISTRY,
+)

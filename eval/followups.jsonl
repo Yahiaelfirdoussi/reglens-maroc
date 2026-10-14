@@ -1,0 +1,23 @@
+{"id": "f01", "context": "q001", "followup": "Et pour le ratio structurel de liquidité à long terme ?", "target": "q008", "kind": "follow_up"}
+{"id": "f02", "context": "q008", "followup": "Et pour les banques participatives, quel calendrier transitoire ?", "target": "q011", "kind": "follow_up"}
+{"id": "f03", "context": "q001", "followup": "Quelle décote s'applique aux actifs de niveau 2A dans ce ratio ?", "target": "q003", "kind": "follow_up"}
+{"id": "f04", "context": "q016", "followup": "Dans quelle limite les provisions pour risques généraux peuvent-elles y être incluses ?", "target": "q018", "kind": "follow_up"}
+{"id": "f05", "context": "q018", "followup": "Et les plus-values latentes sur titres de placement ?", "target": "q020", "kind": "follow_up"}
+{"id": "f06", "context": "q049", "followup": "Et l'AMMC, de combien de temps dispose-t-elle pour une plainte ?", "target": "q063", "kind": "follow_up"}
+{"id": "f07", "context": "q063", "followup": "Et pour un conseiller en investissement financier ?", "target": "q068", "kind": "follow_up"}
+{"id": "f08", "context": "q023", "followup": "Et comment est-elle calculée pour le risque opérationnel selon l'approche indicateur de base ?", "target": "q026", "kind": "follow_up"}
+{"id": "f09", "context": "q065", "followup": "Dans quel délai doit-il instruire la réclamation d'un client ?", "target": "q068", "kind": "follow_up"}
+{"id": "f10", "context": "q055", "followup": "Et si c'est la banque qui décide de fermer le compte ?", "target": "q056", "kind": "follow_up"}
+{"id": "f11", "context": "q012", "followup": "Which exposures make up its denominator?", "target": "q013", "kind": "follow_up"}
+{"id": "f12", "context": "q036", "followup": "And what is its minimum composition?", "target": "q035", "kind": "follow_up"}
+{"id": "f13", "context": "q050", "followup": "And how long does it have to answer the complaint itself?", "target": "q049", "kind": "follow_up"}
+{"id": "f14", "context": "q067", "followup": "What minimum professional experience is required of its managers?", "target": "q065", "kind": "follow_up"}
+{"id": "c01", "context": "q049", "followup": "@target", "target": "q012", "kind": "standalone"}
+{"id": "c02", "context": "q001", "followup": "@target", "target": "q063", "kind": "standalone"}
+{"id": "c03", "context": "q063", "followup": "@target", "target": "q024", "kind": "standalone"}
+{"id": "c04", "context": "q016", "followup": "@target", "target": "q058", "kind": "standalone"}
+{"id": "u01", "context": "q016", "followup": "Et le coussin contracyclique, à quel taux ?", "target": "u004", "kind": "unanswerable"}
+{"id": "u02", "context": "q060", "followup": "Et quel est le plafond d'indemnisation par déposant ?", "target": "u007", "kind": "unanswerable"}
+{"id": "u03", "context": "q053", "followup": "Et la durée maximale d'un crédit à la consommation ?", "target": "u009", "kind": "unanswerable"}
+{"id": "u04", "context": "q017", "followup": "And what surcharge applies to systemically important banks?", "target": "u012", "kind": "unanswerable"}
+{"id": "u05", "context": "q049", "followup": "@target", "target": "u002", "kind": "unanswerable"}

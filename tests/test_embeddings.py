@@ -54,6 +54,18 @@ def test_openai_embedder_retries_rate_limits() -> None:
     assert embedder.embed_query("question FICTIONAL") == [1.0]
 
 
+def test_openai_embedder_does_not_retry_an_exhausted_quota() -> None:
+    calls: list[int] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(1)
+        return httpx.Response(429, json={"error": {"code": "insufficient_quota"}})
+
+    with pytest.raises(httpx.HTTPStatusError):
+        _openai(httpx.MockTransport(handler)).embed_query("question FICTIONAL")
+    assert len(calls) == 1  # permanent: fails at once instead of after a minute of retries
+
+
 def test_openai_embedder_raises_on_client_errors() -> None:
     embedder = _openai(httpx.MockTransport(lambda request: httpx.Response(401)))
     with pytest.raises(httpx.HTTPStatusError):

@@ -6,6 +6,8 @@ Search modes: "dense" (embeddings), "sparse" (BM25 only, for diagnostics) and "h
 
 import threading
 from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any, Literal
 
@@ -34,6 +36,67 @@ def make_client(url: str | None, path: Path, api_key: str | None = None) -> Qdra
         return QdrantClient(location=":memory:")
     path.mkdir(parents=True, exist_ok=True)
     return QdrantClient(path=str(path))
+
+
+@dataclass(frozen=True)
+class SearchFilter:
+    """Restrict a search by document metadata. Empty fields do not filter; with a date
+    bound, documents without a publication date are excluded."""
+
+    issuers: tuple[str, ...] = ()
+    languages: tuple[str, ...] = ()
+    date_from: date | None = None
+    date_to: date | None = None
+
+    def is_empty(self) -> bool:
+        return not (self.issuers or self.languages or self.date_from or self.date_to)
+
+    def key(self) -> str:
+        """Stable text form, for cache keys."""
+        if self.is_empty():
+            return ""
+        return "|".join(
+            (
+                ",".join(sorted(self.issuers)),
+                ",".join(sorted(self.languages)),
+                self.date_from.isoformat() if self.date_from else "",
+                self.date_to.isoformat() if self.date_to else "",
+            )
+        )
+
+    def to_qdrant(self) -> models.Filter | None:
+        if self.is_empty():
+            return None
+        must: list[models.Condition] = []
+        if self.issuers:
+            must.append(
+                models.FieldCondition(key="issuer", match=models.MatchAny(any=list(self.issuers)))
+            )
+        if self.languages:
+            must.append(
+                models.FieldCondition(
+                    key="language", match=models.MatchAny(any=list(self.languages))
+                )
+            )
+        if self.date_from or self.date_to:
+            must.append(
+                models.FieldCondition(
+                    key="published",
+                    range=models.DatetimeRange(
+                        gte=self.date_from.isoformat() if self.date_from else None,
+                        lte=self.date_to.isoformat() if self.date_to else None,
+                    ),
+                )
+            )
+        return models.Filter(must=must)
+
+
+@dataclass(frozen=True)
+class CorpusSummary:
+    documents: int
+    issuers: list[str]
+    first_year: int | None
+    last_year: int | None
 
 
 def _sparse(vector: SparseVector) -> models.SparseVector:
@@ -103,8 +166,11 @@ class QdrantStore:
         sparse: SparseVector | None = None,
         mode: SearchMode = "dense",
         candidates: int = 30,
+        where: SearchFilter | None = None,
     ) -> list[ScoredChunk]:
-        """Top ``limit`` chunks; hybrid fuses the top ``candidates`` of each vector (RRF)."""
+        """Top ``limit`` chunks; hybrid fuses the top ``candidates`` of each vector (RRF).
+        ``where`` restricts every stage to matching documents."""
+        query_filter = where.to_qdrant() if where else None
         if mode != "dense":
             if sparse is None:
                 raise ValueError(f"{mode} search needs a sparse query vector")
@@ -114,7 +180,12 @@ class QdrantStore:
                 )
         if mode == "dense":
             response = self._client.query_points(
-                self._collection, query=list(vector), using=DENSE, limit=limit, with_payload=True
+                self._collection,
+                query=list(vector),
+                using=DENSE,
+                query_filter=query_filter,
+                limit=limit,
+                with_payload=True,
             )
         elif mode == "sparse":
             assert sparse is not None
@@ -122,6 +193,7 @@ class QdrantStore:
                 self._collection,
                 query=_sparse(sparse),
                 using=SPARSE,
+                query_filter=query_filter,
                 limit=limit,
                 with_payload=True,
             )
@@ -130,10 +202,15 @@ class QdrantStore:
             response = self._client.query_points(
                 self._collection,
                 prefetch=[
-                    models.Prefetch(query=list(vector), using=DENSE, limit=candidates),
-                    models.Prefetch(query=_sparse(sparse), using=SPARSE, limit=candidates),
+                    models.Prefetch(
+                        query=list(vector), using=DENSE, filter=query_filter, limit=candidates
+                    ),
+                    models.Prefetch(
+                        query=_sparse(sparse), using=SPARSE, filter=query_filter, limit=candidates
+                    ),
                 ],
                 query=models.FusionQuery(fusion=models.Fusion.RRF),
+                query_filter=query_filter,
                 limit=limit,
                 with_payload=True,
             )
@@ -154,6 +231,37 @@ class QdrantStore:
     def _file_filter(file: str) -> models.Filter:
         return models.Filter(
             must=[models.FieldCondition(key="file", match=models.MatchValue(value=file))]
+        )
+
+    def summary(self) -> "CorpusSummary":
+        """Documents, issuers and publication years in the index (for the home page)."""
+        files: set[str] = set()
+        issuers: set[str] = set()
+        years: set[int] = set()
+        offset = None
+        while True:
+            points, offset = self._client.scroll(
+                self._collection,
+                limit=1000,
+                offset=offset,
+                with_payload=["file", "issuer", "published"],
+                with_vectors=False,
+            )
+            for point in points:
+                payload = point.payload or {}
+                if payload.get("file"):
+                    files.add(str(payload["file"]))
+                if payload.get("issuer"):
+                    issuers.add(str(payload["issuer"]))
+                if payload.get("published"):
+                    years.add(int(str(payload["published"])[:4]))
+            if offset is None:
+                break
+        return CorpusSummary(
+            documents=len(files),
+            issuers=sorted(issuers),
+            first_year=min(years) if years else None,
+            last_year=max(years) if years else None,
         )
 
     def any_payload(self) -> dict[str, object] | None:

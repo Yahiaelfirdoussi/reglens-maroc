@@ -37,7 +37,6 @@ api = [
     "prometheus-client>=0.20",
     "python-multipart>=0.0.9",
 ]
-ui = ["streamlit>=1.36"]
 
 [project.scripts]
 reglens = "reglens.cli:app"

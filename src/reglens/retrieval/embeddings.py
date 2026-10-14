@@ -93,6 +93,17 @@ class HashEmbedder:
         return self._vector(text)
 
 
+def _quota_exhausted(response: httpx.Response) -> bool:
+    """A 429 for an empty account or exhausted quota is permanent: retrying only wastes time."""
+    if response.status_code != 429:
+        return False
+    try:
+        code = str(response.json().get("error", {}).get("code", ""))
+    except ValueError:
+        return False
+    return code in {"insufficient_quota", "credit_balance_exhausted", "billing_hard_limit_reached"}
+
+
 class OpenAIEmbedder:
     """OpenAI embeddings over plain HTTP (no SDK): batched, with retries and timeouts."""
 
@@ -143,7 +154,7 @@ class OpenAIEmbedder:
                     json={"model": self._model, "input": texts},
                     headers=self._headers,
                 )
-                if response.status_code not in self.RETRY_STATUSES:
+                if response.status_code not in self.RETRY_STATUSES or _quota_exhausted(response):
                     response.raise_for_status()
                     payload = response.json()
                     self.tokens_used += int(payload.get("usage", {}).get("total_tokens", 0))

@@ -370,3 +370,82 @@ Every difference is about one question, within run-to-run noise, so `minimal` is
 of the speed gain comes from the warm-up, streaming and single embedding; `minimal` adds a
 smaller, network-dependent saving. The answer evaluation now records a failing question
 (network error) instead of losing the whole run, and network retries last about a minute.
+
+## Phase 6: metadata filters and page links
+
+Searches can be restricted by regulator, document language and publication date (API:
+`issuers`, `languages`, `date_from`, `date_to`). They were also in the interface sidebar
+(regulator, year range) and were removed from it by owner decision on 2026-10-05: they add
+almost nothing to quality (below) and clutter a public-facing chat. The filter is applied inside Qdrant, to both vectors in hybrid mode, so the top 6
+are always drawn from the matching texts; nothing matching means the fixed "not found"
+answer, without calling the LLM. Answers with different filters are cached separately.
+
+Measured on the 96 answerable questions (`text-embedding-3-large`, article chunks, dense):
+
+| Configuration | Hit@1 | Hit@6 | MRR@6 | Document hit@6 |
+|---|---:|---:|---:|---:|
+| No filter (default, unchanged) | 74.0% | 95.8% | 0.828 | 99.0% |
+| Oracle regulator filter (each question limited to its expected regulator) | 75.0% | 95.8% | 0.837 | 99.0% |
+
+Retrieval almost never mixes Bank Al-Maghrib and AMMC texts, so a correct regulator filter
+gains one first-place hit and changes no miss (the same four questions fail with and
+without it). The filters are a scoping tool for the user ("only AMMC", "texts since 2020"),
+not a quality fix; they stay off by default.
+
+Every source now links to the official PDF at the cited page (`#page=N`, with the URL
+encoded). AMMC serves its PDFs for display, so the link opens at the right page; Bank
+Al-Maghrib forces a download, which browsers open at page 1, so the page number is also
+written in the link text.
+
+## Phase 6: follow-up questions (conversation memory)
+
+A follow-up such as "Et pour un conseiller en investissement financier ?" means nothing on
+its own. When a conversation has earlier turns, one short LLM call rewrites the message into
+a standalone question (last 3 turns, earlier answers cut to 500 characters, citation markers
+removed); that question is what the guardrails check, the search uses and the model answers.
+Earlier answers only resolve references and are never given to the model as sources. The
+interface shows the rewritten question ("Question comprise : …"); the API takes an optional
+`history` and does not cache follow-ups. Single questions are unchanged: no history, no
+rewrite, same prompts as above.
+
+Measured with `reglens eval-followups` on `eval/followups.jsonl`: 23 cases built only from
+approved golden questions (the first question is really answered, then the follow-up is
+sent; the expected passage is the target golden question's evidence).
+
+| Cases | n | Hit@6 alone | Hit@6 with context | MRR alone | MRR with context | Answered |
+|---|---:|---:|---:|---:|---:|---:|
+| Follow-ups | 14 | 85.7% | 100.0% | 0.568 | 0.833 | 100.0% |
+| Complete questions after an unrelated one | 4 | 100.0% | 100.0% | 1.000 | 1.000 | 100.0% |
+
+| Unanswerable follow-ups | n | Abstained alone | Abstained with context |
+|---|---:|---:|---:|
+| Not in the texts | 5 | 100.0% | 80.0% |
+
+The rewrite costs about 0.7 s (p50) on every message after the first.
+
+**Abstention on follow-ups (flagged, then decided).** In the first run, u02 (after a question
+on the deposit guarantee fund's contribution, "Et quel est le plafond d'indemnisation par
+déposant ?") was rewritten without the fund's name and one answer quoted the ceiling of
+AMMC's investor guarantee fund, a different fund. The rewrite prompt now carries over every
+element of the earlier question that the follow-up does not replace (fund, ratio,
+institution, regulator); after the fix no u02 answer cited the other fund. Re-run twice with
+the fix:
+
+| Run | Follow-ups hit@6 (alone → context) | MRR (alone → context) | Unanswerable: abstained (alone → context) |
+|---|---:|---:|---:|
+| 1 | 85.7% → 92.9% | 0.568 → 0.762 | 80% → 60% |
+| 2 | 85.7% → 92.9% | 0.568 → 0.762 | 80% → 60% |
+
+The two unanswerable follow-ups that get an answer are not caused by the conversation: the
+model answers from a neighbouring provision (u02: what the deposit-fund texts say about
+eligible deposits; u04: Bank Al-Maghrib may require a higher leverage ratio from a systemic
+bank, 6/W/2021 Article 15), and u02 is also answered when asked alone. A stricter answer
+prompt ("reply NOT_FOUND when the sources only cover a neighbouring subject") was prepared
+and **not adopted, by owner decision**: when the texts may hold the answer, RegLens answers
+from them; "not found" exists to keep out unrelated questions (weather, general knowledge),
+which the guardrails and the score floor still do. The answer prompt is unchanged.
+
+Open defect (faithfulness, not abstention): in one u04 run the answer added a 75%–150% range
+"for the liquidity coverage ratio", citing an article on deposit guarantee contributions
+(6/W/2018 Article 3). The judge-based faithfulness score tracks this class of error (97.1%
+on the golden set); it is not specific to follow-ups.

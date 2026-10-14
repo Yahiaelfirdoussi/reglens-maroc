@@ -1,4 +1,4 @@
-"""HTTP API: question answering (plain and streamed), ingestion, health and metrics.
+"""HTTP API and web page: question answering (plain and streamed), ingestion, health, metrics.
 
 Run:  reglens serve   (or: uvicorn reglens.api.main:app)
 """
@@ -9,15 +9,17 @@ import time
 import uuid
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
+from datetime import date
 from pathlib import Path
 from typing import Annotated, Literal
 
 import structlog
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
 
@@ -25,26 +27,69 @@ from reglens import metrics
 from reglens.api.security import KeyRing, RateLimiter, Role, key_id
 from reglens.cache import cache_key
 from reglens.config import Settings, get_settings
-from reglens.generation.citations import Citation
+from reglens.generation.citations import Citation, page_link
 from reglens.guardrails import MAX_QUESTION_CHARS
 from reglens.ingestion.metadata import write_sidecar
 from reglens.ingestion.ocr import OcrUnavailableError, ocr_document
 from reglens.log import configure_logging
 from reglens.models import DocumentMetadata, Issuer, Language
 from reglens.rag import Answer
+from reglens.retrieval.vector_store import SearchFilter
 from reglens.service import Service, build_service
 
 log = structlog.get_logger(__name__)
 
 Status = Literal["answered", "not_found", "out_of_scope", "sources_only"]
+WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+# The page renders model output: allow only this origin's scripts and Google Fonts.
+PAGE_HEADERS = {
+    "Content-Security-Policy": (
+        "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; "
+        "font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; "
+        "frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+    ),
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+}
 
 
 # --- Schemas --------------------------------------------------------------------------------
 
 
+class TurnIn(BaseModel):
+    question: str = Field(min_length=1, max_length=MAX_QUESTION_CHARS * 2)
+    answer: str = Field(default="", max_length=4000)
+
+
 class QueryIn(BaseModel):
     question: str = Field(min_length=1, max_length=MAX_QUESTION_CHARS * 2)
     k: int | None = Field(default=None, ge=1, le=20)
+    # Optional search filters: only documents matching all of them are used.
+    issuers: list[Issuer] = Field(default_factory=list, max_length=3)
+    languages: list[Language] = Field(default_factory=list, max_length=3)
+    date_from: date | None = None  # publication date, inclusive
+    date_to: date | None = None
+    # Earlier turns of the conversation, oldest first: a follow-up ("and for the AMMC?")
+    # is rewritten into a standalone question. Follow-ups are not cached.
+    history: list[TurnIn] = Field(default_factory=list, max_length=10)
+
+    @model_validator(mode="after")
+    def _dates_in_order(self) -> "QueryIn":
+        if self.date_from and self.date_to and self.date_from > self.date_to:
+            raise ValueError("date_from must not be after date_to")
+        return self
+
+    def turns(self) -> list[tuple[str, str]]:
+        return [(t.question, t.answer) for t in self.history]
+
+    def where(self) -> SearchFilter | None:
+        where = SearchFilter(
+            issuers=tuple(sorted(set(self.issuers))),
+            languages=tuple(sorted(set(self.languages))),
+            date_from=self.date_from,
+            date_to=self.date_to,
+        )
+        return None if where.is_empty() else where
 
 
 class SourceOut(BaseModel):
@@ -57,7 +102,9 @@ class SourceOut(BaseModel):
     page_start: int
     page_end: int
     url: str
+    link: str  # the official PDF at the cited page
     snippet: str
+    excerpt: str  # the passage as retrieved, for the source panel
     score: float
 
 
@@ -69,9 +116,22 @@ class QueryOut(BaseModel):
     sources: list[SourceOut]
     guardrail: str
     abstention: str
+    standalone_question: str | None  # set when a follow-up was rewritten
     cached: bool
     retrieval_ms: float
     generation_ms: float | None
+
+
+class CorpusOut(BaseModel):
+    documents: int
+    issuers: list[str]
+    first_year: int | None
+    last_year: int | None
+
+
+class FeedbackIn(BaseModel):
+    request_id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
+    rating: Literal["up", "down"]
 
 
 class IngestOut(BaseModel):
@@ -107,13 +167,16 @@ def to_output(answer: Answer, request_id: str, cached: bool) -> QueryOut:
                 page_start=s.chunk.page_start,
                 page_end=s.chunk.page_end,
                 url=s.chunk.url,
+                link=page_link(s.chunk.url, s.chunk.page_start),
                 snippet=s.chunk.text[:300],
+                excerpt=s.chunk.text[:1500],
                 score=s.score,
             )
             for n, s in enumerate(answer.sources, start=1)
         ],
         guardrail=answer.guardrail,
         abstention=answer.abstention,
+        standalone_question=answer.standalone_question,
         cached=cached,
         retrieval_ms=answer.retrieval_ms,
         generation_ms=answer.generation_ms,
@@ -122,6 +185,8 @@ def to_output(answer: Answer, request_id: str, cached: bool) -> QueryOut:
 
 def observe(answer: Answer, total_s: float) -> None:
     metrics.STAGE_SECONDS.labels("total").observe(total_s)
+    if answer.rewrite_ms:
+        metrics.STAGE_SECONDS.labels("rewrite").observe(answer.rewrite_ms / 1000)
     if answer.guardrail != "ok":
         metrics.GUARDRAIL.labels(answer.guardrail).inc()
         return
@@ -199,6 +264,8 @@ def create_app(settings: Settings | None = None, service: Service | None = None)
     def caller(request: Request, minimum: Role) -> str:
         key = request.headers.get("X-API-Key")
         role = keys.role(key)
+        if role is None and not key and minimum == "user" and settings.public_queries:
+            role = "user"  # public page: keyless questions, rate-limited per client IP
         if role is None:
             raise HTTPException(401, "Missing or invalid X-API-Key.")
         if minimum == "admin" and role != "admin":
@@ -225,6 +292,14 @@ def create_app(settings: Settings | None = None, service: Service | None = None)
             raise HTTPException(503, "The service is not ready (index or providers unavailable).")
         return state["service"]
 
+    if (WEB_DIR / "index.html").exists():
+        app.mount("/static", StaticFiles(directory=WEB_DIR / "static"), name="static")
+
+        @app.get("/", include_in_schema=False)
+        def page() -> FileResponse:
+            """The chat page (same origin as the API it calls)."""
+            return FileResponse(WEB_DIR / "index.html", headers=PAGE_HEADERS)
+
     @app.get("/health")
     def health() -> dict[str, str]:
         """Liveness: the process is up."""
@@ -247,19 +322,44 @@ def create_app(settings: Settings | None = None, service: Service | None = None)
             generate_latest(metrics.REGISTRY).decode(), media_type=CONTENT_TYPE_LATEST
         )
 
+    @app.get("/v1/corpus", response_model=CorpusOut)
+    def corpus(_: Annotated[str, Depends(user)]) -> CorpusOut:
+        """What the index contains: documents, regulators and publication years."""
+        summary = svc().retriever.store.summary()
+        return CorpusOut(
+            documents=summary.documents,
+            issuers=summary.issuers,
+            first_year=summary.first_year,
+            last_year=summary.last_year,
+        )
+
+    @app.post("/v1/feedback", status_code=204)
+    def feedback(body: FeedbackIn, _: Annotated[str, Depends(user)]) -> Response:
+        """A reader's rating of one answer (by its request ID): logged and counted."""
+        metrics.FEEDBACK.labels(body.rating).inc()
+        log.info("answer_feedback", answer_request_id=body.request_id, rating=body.rating)
+        return Response(status_code=204)
+
     @app.post("/v1/query", response_model=QueryOut)
     def query(body: QueryIn, request: Request, _: Annotated[str, Depends(user)]) -> QueryOut:
         service_ = svc()
         k = body.k or service_.pipeline.top_k
-        key = cache_key(body.question, k)
-        cached = service_.cache.get(key)
-        metrics.CACHE.labels("hit" if cached else "miss").inc()
+        where = body.where()
+        key = cache_key(body.question, k, where.key() if where else "")
+        cacheable = not body.history
+        cached = service_.cache.get(key) if cacheable else None
+        if cacheable:
+            metrics.CACHE.labels("hit" if cached else "miss").inc()
         if cached is not None:
             return to_output(cached, request.state.request_id, cached=True)
         start = time.perf_counter()
-        answer = service_.pipeline.answer(body.question)
+        try:
+            answer = service_.pipeline.answer(body.question, where, body.turns())
+        except Exception as error:  # provider down, quota exhausted, network
+            log.error("answer_failed", error=type(error).__name__)
+            raise HTTPException(503, "The answering service is temporarily unavailable.") from error
         observe(answer, time.perf_counter() - start)
-        if answer.guardrail == "ok":
+        if cacheable and answer.guardrail == "ok":
             service_.cache.set(key, answer)
         return to_output(answer, request.state.request_id, cached=False)
 
@@ -271,28 +371,36 @@ def create_app(settings: Settings | None = None, service: Service | None = None)
         service_ = svc()
         request_id = request.state.request_id
         k = body.k or service_.pipeline.top_k
-        key = cache_key(body.question, k)
+        where = body.where()
+        key = cache_key(body.question, k, where.key() if where else "")
 
         def sse(event: str, data: str) -> str:
             payload = "\n".join(f"data: {line}" for line in data.split("\n"))
             return f"event: {event}\n{payload}\n\n"
 
         def events() -> Iterator[str]:
-            cached = service_.cache.get(key)
-            metrics.CACHE.labels("hit" if cached else "miss").inc()
+            cacheable = not body.history
+            cached = service_.cache.get(key) if cacheable else None
+            if cacheable:
+                metrics.CACHE.labels("hit" if cached else "miss").inc()
             if cached is not None:
                 yield sse("token", json.dumps(cached.text or ""))
                 yield sse("answer", to_output(cached, request_id, True).model_dump_json())
                 return
             start = time.perf_counter()
-            for piece in service_.pipeline.stream(body.question):
-                if isinstance(piece, Answer):
-                    observe(piece, time.perf_counter() - start)
-                    if piece.guardrail == "ok":
-                        service_.cache.set(key, piece)
-                    yield sse("answer", to_output(piece, request_id, False).model_dump_json())
-                else:
-                    yield sse("token", json.dumps(piece))
+            try:
+                for piece in service_.pipeline.stream(body.question, where, body.turns()):
+                    if isinstance(piece, Answer):
+                        observe(piece, time.perf_counter() - start)
+                        if cacheable and piece.guardrail == "ok":
+                            service_.cache.set(key, piece)
+                        yield sse("answer", to_output(piece, request_id, False).model_dump_json())
+                    else:
+                        yield sse("token", json.dumps(piece))
+            except Exception as error:  # headers are sent: report it as an event
+                log.error("answer_failed", error=type(error).__name__)
+                message = "The answering service is temporarily unavailable."
+                yield sse("error", json.dumps({"detail": message}))
 
         return StreamingResponse(
             events(),

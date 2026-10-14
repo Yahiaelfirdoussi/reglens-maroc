@@ -32,18 +32,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build API image
+      - name: Build image
         run: docker build -t reglens-api .
-      - name: Build interface image
-        run: docker build -t reglens-ui --build-arg EXTRAS=llm,ui .
-      - name: Images run as a non-root user
-        run: |
-          test "$(docker run --rm reglens-api id -u)" = "10001"
-          test "$(docker run --rm reglens-ui id -u)" = "10001"
-      - name: API image starts (no index yet) - /health ok, /ready reports 503
+      - name: Image runs as a non-root user
+        run: test "$(docker run --rm reglens-api id -u)" = "10001"
+      - name: Image starts (no index yet) - /health ok, web page served, /ready reports 503
         run: |
           docker run -d --name api -p 8000:8000 -e REGLENS_EMBEDDING_MODEL=hash \
             -e REGLENS_WARM_ON_START=false reglens-api
           for i in $(seq 1 30); do curl -sf http://localhost:8000/health && break; sleep 1; done
           curl -sf http://localhost:8000/health || { docker logs api; exit 1; }
+          curl -sf http://localhost:8000/ | grep -q "RegLens Maroc"
+          curl -sf http://localhost:8000/static/app.js >/dev/null
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/ready)" = "503"

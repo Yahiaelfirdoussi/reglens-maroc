@@ -1,8 +1,9 @@
-# API + Qdrant + chat interface.
+# API (with the web page at http://localhost:8000) + Qdrant.
 #   docker compose up -d
 #   docker compose run --rm api reglens ingest /data/raw      # index the documents once
 # Settings and keys come from .env (REGLENS_EMBEDDING_API_KEY, REGLENS_LLM_API_KEY,
-# REGLENS_API_KEYS, REGLENS_ADMIN_API_KEYS, model names, chunking).
+# REGLENS_API_KEYS, REGLENS_ADMIN_API_KEYS, model names, chunking). With API keys set, also set
+# REGLENS_PUBLIC_QUERIES=true so the web page (which holds no key) can ask questions.
 
 services:
   qdrant:
@@ -23,26 +24,6 @@ services:
       - ./data/raw:/data/raw
     ports:
       - "8000:8000"
-    depends_on:
-      - qdrant
-    restart: unless-stopped
-
-  ui:
-    build:
-      context: .
-      args:
-        EXTRAS: llm,ui
-    command: ["streamlit", "run", "ui/app.py", "--server.address", "0.0.0.0", "--server.port", "8501"]
-    env_file: .env
-    environment:
-      REGLENS_QDRANT_URL: http://qdrant:6333
-    ports:
-      - "8501:8501"
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=4)"]
-      interval: 30s
-      timeout: 5s
-      start_period: 60s
     depends_on:
       - qdrant
     restart: unless-stopped

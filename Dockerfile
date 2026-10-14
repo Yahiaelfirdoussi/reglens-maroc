@@ -1,6 +1,5 @@
-# RegLens Maroc: API (default) or Streamlit interface (EXTRAS="llm,ui").
+# RegLens Maroc: the API and the web page it serves at "/".
 # Build:  docker build -t reglens .
-#         docker build -t reglens-ui --build-arg EXTRAS=llm,ui .
 
 FROM python:3.11-slim-bookworm AS builder
 ARG EXTRAS=api,llm
@@ -19,8 +18,6 @@ RUN apt-get update \
 RUN useradd --create-home --uid 10001 reglens
 COPY --from=builder /opt/venv /opt/venv
 WORKDIR /app
-COPY --chown=reglens:reglens ui ./ui
-COPY --chown=reglens:reglens .streamlit ./.streamlit
 RUN mkdir -p /data/raw && chown -R reglens:reglens /data
 ENV PATH="/opt/venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \

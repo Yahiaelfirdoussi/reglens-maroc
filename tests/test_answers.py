@@ -12,7 +12,7 @@ class _StubRetriever:
     def __init__(self, score: float) -> None:
         self.score = score
 
-    def retrieve(self, question: str, k: int) -> list[ScoredChunk]:
+    def retrieve(self, question: str, k: int, where: object = None) -> list[ScoredChunk]:
         chunk = Chunk(
             id="00000000-0000-0000-0000-000000000001",
             text="Article 3 Le ratio FICTIONAL est au moins égal à 5,5 % des risques.",
@@ -148,7 +148,7 @@ def test_stream_returns_guardrail_answers_directly() -> None:
 
 
 class _FailingRetriever:
-    def retrieve(self, question: str, k: int) -> list[ScoredChunk]:
+    def retrieve(self, question: str, k: int, where: object = None) -> list[ScoredChunk]:
         raise ConnectionError("network down (FICTIONAL)")
 
 

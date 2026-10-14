@@ -96,7 +96,7 @@ class _NoRetrieval:
 
     embedder = HashEmbedder()
 
-    def retrieve(self, question: str, k: int) -> list[object]:
+    def retrieve(self, question: str, k: int, where: object = None) -> list[object]:
         raise AssertionError("guardrails must answer before retrieval")
 
 

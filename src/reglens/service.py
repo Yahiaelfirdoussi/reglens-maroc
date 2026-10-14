@@ -1,7 +1,10 @@
 """Builds the answering pipeline from settings; shared by the CLI, the UI and the API."""
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import structlog
 
 from reglens.cache import TTLCache
 from reglens.config import Settings, get_settings
@@ -13,6 +16,8 @@ from reglens.retrieval.embeddings import make_embedder
 from reglens.retrieval.reranker import make_reranker
 from reglens.retrieval.retriever import Retriever
 from reglens.retrieval.vector_store import QdrantStore, make_client
+
+log = structlog.get_logger(__name__)
 
 
 class EmptyIndexError(RuntimeError):
@@ -39,6 +44,15 @@ def build_retriever(settings: Settings | None = None) -> Retriever:
     )
 
 
+def _warm(what: str, call: Callable[[], object]) -> None:
+    """Warm-up only saves time on the first question: a provider that is down (network,
+    quota) must not stop the app from starting; questions will report the error."""
+    try:
+        call()
+    except Exception as error:
+        log.warning("warm_up_failed", provider=what, error=type(error).__name__)
+
+
 def build_pipeline(
     settings: Settings | None = None, k: int | None = None, warm: bool = False
 ) -> RagPipeline:
@@ -55,10 +69,10 @@ def build_pipeline(
             settings.llm_model, key, settings.llm_timeout_s, settings.llm_reasoning_effort
         )
         if warm:
-            llm.warm_up()
+            _warm("llm", llm.warm_up)
     retriever = build_retriever(settings)
     if warm:
-        retriever.embedder.embed_query("warm-up")
+        _warm("embedder", lambda: retriever.embedder.embed_query("warm-up"))
     return RagPipeline(
         retriever,
         llm,

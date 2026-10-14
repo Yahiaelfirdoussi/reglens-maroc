@@ -74,6 +74,9 @@ class Settings(BaseSettings):
     api_keys: SecretStr | None = None
     admin_api_keys: SecretStr | None = None
     rate_limit_per_minute: int = 30  # per key (per client IP when the API is open)
+    # Let callers without an API key ask questions (rate-limited per IP): needed by the web
+    # page, which cannot hold a secret. Ingestion always requires an admin key.
+    public_queries: bool = False
     cors_origins: str = ""  # comma-separated allowed origins; "" = no cross-origin access
     answer_cache_ttl_s: int = 600  # 0 disables the answer cache
     answer_cache_size: int = 512
